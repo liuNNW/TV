@@ -243,6 +243,46 @@ h3 { font-size: 15px; }
 
 .pager .info { color: var(--text-dim); font-size: 13px; }
 
+/* ---------- 首页分类：换行胶囊面板，不使用横向滚动条 ---------- */
+body.page-home #catBox {
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  padding: 9px 12px;
+  margin-bottom: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: visible;
+}
+
+/* 「分类」标签，和第一个胶囊同一行 */
+body.page-home #catBox::before {
+  content: "分类";
+  flex: 0 0 auto;
+  align-self: center;
+  padding-right: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* 搜索页没有分类时，不显示空面板 */
+body.page-home #catBox:empty { display: none; }
+
+/* 胶囊按钮：比默认按钮紧凑，一屏能展示更多分类 */
+body.page-home #catBox button {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  border-radius: 999px;
+}
+
+body.page-home #catBox button span {
+  font-size: 10.5px;
+  opacity: .55;
+}
+
 /* ---------- 桌面首页：一页 20 张卡片完整落在首屏 ---------- */
 @media (min-width: 1600px) {
   body.page-home main.wrap {
@@ -254,15 +294,6 @@ h3 { font-size: 15px; }
     grid-template-columns: repeat(10, minmax(0, 1fr));
     gap: 14px;
   }
-  body.page-home #catBox {
-    /* 分类再多也只占一行，不把卡片区往下挤 */
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    margin-bottom: 10px;
-    padding-bottom: 2px;
-    scrollbar-width: thin;
-  }
-  body.page-home #catBox button { flex: 0 0 auto; }
 }
 
 /* ---------- 详情页 ---------- */
