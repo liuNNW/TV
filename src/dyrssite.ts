@@ -460,6 +460,108 @@ export function parseMaxPage(html: string): number {
   return max;
 }
 
+/* ---------------- 云盘分享源（/api/drive/list） ---------------- */
+
+/**
+ * 站点详情页里的 `box_data`。
+ * 云盘分享接口是按 box_data.name（去掉季/集后缀的片名）或 imdb_id 查的，
+ * 不是按页面上显示的完整标题，所以解析详情时必须一起带出来。
+ */
+export interface BoxData {
+  /** 用于云盘查询的片名（如「中国尘封罪案实录」） */
+  boxName: string;
+  /** IMDb 编号（tt 开头时上游优先用它查） */
+  imdbId: string;
+  /** 上游 CDN 主机（详情页里会给，默认 box.dyrs.com.de） */
+  cdnBase: string;
+}
+
+/** 从详情页里抠 `var box_data={...}` */
+export function parseBoxData(html: string): BoxData {
+  const block = html.match(/box_data\s*=\s*\{([\s\S]*?)\}/);
+  const empty: BoxData = { boxName: '', imdbId: '', cdnBase: '' };
+  if (!block) return empty;
+  const field = (key: string): string => {
+    const m = block[1].match(new RegExp(`${key}\\s*:\\s*["']([^"']*)["']`));
+    return m ? decodeEntities(m[1]) : '';
+  };
+  return { boxName: field('name'), imdbId: field('imdb_id'), cdnBase: field('url') };
+}
+
+/** 一条云盘分享资源 */
+export interface DriveItem {
+  /** 网盘：baidu / ali … */
+  origin: string;
+  filename: string;
+  /** 带提取码的完整链接 */
+  url: string;
+  /** 提取码（可能为空） */
+  pwd: string;
+}
+
+/**
+ * 解析 /api/drive/list 的 JSON。
+ *
+ * 上游无结果时返回 `null`（不是空数组），这里统一成空数组。
+ * 字段做防御性读取：只保留有 filename 的条目，url 缺失时退回 share_url。
+ */
+export function parseDriveItems(text: string): DriveItem[] {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(raw)) return [];
+
+  const items: DriveItem[] = [];
+  for (const x of raw) {
+    if (!x || typeof x !== 'object') continue;
+    const o = x as Record<string, unknown>;
+    const filename = String(o.filename ?? '').trim();
+    if (!filename) continue;
+    const url = String(o.url ?? o.share_url ?? '').trim();
+    if (!url) continue;
+    items.push({
+      origin: String(o.origin ?? '').trim() || '未知网盘',
+      filename,
+      url,
+      pwd: String(o.pwd ?? '').trim(),
+    });
+  }
+
+  // 上游前端也是百度优先、阿里其次
+  const weight: Record<string, number> = { baidu: 100, ali: 90, aliyundrive: 90 };
+  return items.sort((a, b) => (weight[b.origin] ?? 0) - (weight[a.origin] ?? 0));
+}
+
+/** 云盘列表缓存：key = 查询词（imdb 或片名） */
+const driveCache = new Map<string, { at: number; items: DriveItem[] }>();
+const DRIVE_TTL_MS = 30 * 60_000;
+const DRIVE_CACHE_MAX = 300;
+
+/**
+ * 查云盘分享资源。上游没有结果时返回空数组。
+ * 走 fetchRaw 是为了吃到「挑战自愈」：这个接口同样会被 429 检测页拦。
+ */
+export async function fetchDriveList(query: string): Promise<DriveItem[]> {
+  const key = query.trim();
+  if (!key) return [];
+
+  const hit = driveCache.get(key);
+  if (hit && Date.now() - hit.at < DRIVE_TTL_MS) return hit.items;
+
+  const base = await pickLine();
+  const url = `${base}/api/drive/list?name=${encodeURIComponent(key)}`;
+  const r = await fetchRaw(url, base, 'application/json,*/*', 12_000);
+  if (r.status !== 200) return [];
+
+  const items = parseDriveItems(r.body.toString('utf8'));
+  if (driveCache.size >= DRIVE_CACHE_MAX) driveCache.clear();
+  driveCache.set(key, { at: Date.now(), items });
+  return items;
+}
+
 /* ---------------- 详情页 ---------------- */
 
 export interface SiteEpisode {
@@ -494,6 +596,12 @@ export interface SiteDetail {
   language: string;
   /** 首播日期等杂项 */
   extra: Record<string, string>;
+  /** 云盘分享查询用的片名（box_data.name） */
+  boxName: string;
+  /** IMDb 编号（可能为空） */
+  imdbId: string;
+  /** 上游 CDN 主机（box_data.url，可能为空） */
+  cdnBase: string;
   /**
    * seqlist 编号：选集地址是 `/{kind}/{id}/{seq}.html?origin=线路&p=集序号`。
    * 同一部片固定，和线路无关（见 parseSeqId）。
@@ -530,6 +638,7 @@ function parseJsonLd(html: string): Record<string, unknown> | null {
 /** 解析详情页 */
 export function parseDetail(html: string, id = '', kind = ''): SiteDetail {
   const ld = parseJsonLd(html);
+  const box = parseBoxData(html);
 
   // og 元信息
   const og = (prop: string): string => {
@@ -610,6 +719,9 @@ export function parseDetail(html: string, id = '', kind = ''): SiteDetail {
     area: String(ld?.countryOfOrigin ?? ''),
     language: String(ld?.inLanguage ?? ''),
     extra,
+    boxName: box.boxName,
+    imdbId: box.imdbId,
+    cdnBase: box.cdnBase,
     seq: parseSeqId(html),
     origins: [...origins.values()],
   };

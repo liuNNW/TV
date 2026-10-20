@@ -901,6 +901,7 @@ router.get('/dyrs/seg', async (req, res) => {
 /* ---------------- dyrs 站点数据（新 UI 用，抓镜像站 HTML 解析） ---------------- */
 
 import {
+  fetchDriveList,
   fetchSearchPage,
   fetchSiteImage,
   fetchSitePage,
@@ -1188,6 +1189,27 @@ router.get('/dyrs/site/img', async (req, res) => {
     res.send(r.body);
   } catch (e) {
     fail(res, 502, e instanceof Error ? e.message : '图片获取失败');
+  }
+});
+
+/**
+ * 云盘分享源：GET /api/dyrs/site/drive?name=&imdb=
+ *
+ * 上游 /api/drive/list?name= 返回该片的网盘分享（百度/阿里，带提取码）。
+ * 它按 **box_data.name**（去掉「第X季」等后缀的片名）或 imdb_id 查，
+ * 所以前端把详情接口返回的 boxName / imdbId 一并带上；优先 imdb，
+ * 没结果再按片名回退（和上游前端的逻辑一致）。
+ */
+router.get('/dyrs/site/drive', async (req, res) => {
+  const name = q(req, 'name').trim();
+  const imdb = q(req, 'imdb').trim();
+  if (!name && !imdb) return fail(res, 400, '缺少 name 或 imdb 参数');
+  try {
+    let items = imdb.startsWith('tt') ? await fetchDriveList(imdb) : [];
+    if (items.length === 0 && name) items = await fetchDriveList(name);
+    res.json({ ok: true, items });
+  } catch (e) {
+    fail(res, 502, e instanceof Error ? e.message : '云盘资源获取失败');
   }
 });
 

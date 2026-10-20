@@ -31,28 +31,46 @@ export const DEFAULT_LINE = 'https://tvcang.com';
 /** CDN 主机：原站 detail 页里的 `box_data.url`；实测是独立域名 */
 export const CDN_BASE = process.env.DYRS_CDN || 'https://box.dyrs.com.de';
 
-/** 兜底线路表：拿不到 /api/videox/least 时用（来自 2026-10 实测） */
+/**
+ * 兜底线路表：拿不到 /api/videox/least 时用。
+ * 2026-10-21 从上游实测同步（34 条）；注意 dyrs.me 主页已 302 到落地页，
+ * 但它的 /api/videox/least 与播放链路仍然可用，镜像站本身也照常。
+ */
 const FALLBACK_LINES = [
+  'https://dyrs1080.cc',
+  'https://dyrs5.vip',
+  'https://dyrs7.vip',
+  'https://viprs5.cc',
+  'https://dyrsgo.cc',
+  'https://dyvip5.cc',
+  'https://dyvip2.cc',
+  'https://dyrs360.cc',
+  'https://viprs2.cc',
+  'https://dyvip4.cc',
+  'https://dyvip3.cc',
+  'https://laifu8.com',
+  'https://viprs4.cc',
+  'https://viprs3.cc',
+  'https://dyrs9.vip',
+  'https://gddyrs.cc',
+  'https://dyrsok.vip',
+  'https://pianlai.cc',
+  'https://godyrs.cc',
   'https://tvcang.com',
-  'https://dyrsvip.cc',
-  'https://dyrshd.com',
+  'https://dyrsok.cc',
+  'https://dyrsvip.net',
+  'https://huahaiyy.com',
+  'https://dyrs720.cc',
+  'https://viprs1.cc',
+  'https://dyrs6.vip',
+  'https://wztvyzz.com',
+  'https://dyvip1.cc',
   'https://dyrs1.vip',
   'https://dyrs2.vip',
-  'https://dyrs3.vip',
-  'https://pianlai.cc',
-  'https://wztvyzz.com',
-  'https://huahaiyy.com',
+  'https://dyrsvip.cc',
   'https://dyrshd.cc',
-  'https://laifu8.com',
-  'https://dyrsok.cc',
-  'https://godyrs.cc',
-  'https://dyrsgo.cc',
-  'https://dyrs5.vip',
-  'https://viprs1.cc',
-  'https://gddyrs.cc',
-  'https://dyrs1080.cc',
-  'https://dyrs720.cc',
-  'https://dyvip1.cc',
+  'https://dyrs3.vip',
+  'https://dyrshd.com',
 ];
 
 /* ---------------- 线路发现 ---------------- */

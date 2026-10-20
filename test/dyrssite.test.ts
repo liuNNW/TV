@@ -2,7 +2,17 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { parseBanner, parseCards, parseDetail, parseFilters, parseMaxPage, parseSeqId, toPlaySrc } from '../src/dyrssite.js';
+import {
+  parseBanner,
+  parseBoxData,
+  parseCards,
+  parseDetail,
+  parseDriveItems,
+  parseFilters,
+  parseMaxPage,
+  parseSeqId,
+  toPlaySrc,
+} from '../src/dyrssite.js';
 
 /**
  * 用真实页面快照做解析回归。
@@ -93,6 +103,13 @@ describe('dyrs 站点 HTML 解析', () => {
     }
   });
 
+  it('详情页：box_data（云盘查询用的片名/IMDb/CDN）', () => {
+    const d = parseDetail(load('dyrs-detail.html'));
+    expect(d.boxName).toBe('现在就出发');
+    expect(d.imdbId).toBe('');
+    expect(d.cdnBase).toBe('https://box.dyrs.com.de');
+  });
+
   it('首页：banner 解析', () => {
     const b = parseBanner(load('dyrs-home.html'));
     expect(b.length).toBeGreaterThan(2);
@@ -132,5 +149,34 @@ describe('取流地址换算（上游两种 url 形态）', () => {
 
   it('空 url → 空串（由调用方回 502）', () => {
     expect(toPlaySrc('', undefined, BASE)).toBe('');
+  });
+});
+
+describe('云盘分享源（/api/drive/list）', () => {
+  it('解析并排序：百度优先；url 缺失时回退 share_url；无 filename 的条目丢掉', () => {
+    const items = parseDriveItems(JSON.stringify([
+      { origin: 'ali', share_url: 'https://www.aliyundrive.com/s/abc', pwd: '', filename: '阿里资源.mkv' },
+      { origin: 'baidu', share_url: 'https://pan.baidu.com/s/x', pwd: 'dyrs', filename: '百度资源.mp4', url: 'https://pan.baidu.com/s/x?pwd=dyrs' },
+      { origin: 'baidu', pwd: 'dyrs' },
+    ]));
+    expect(items).toHaveLength(2);
+    expect(items[0].origin).toBe('baidu');
+    expect(items[0].url).toBe('https://pan.baidu.com/s/x?pwd=dyrs');
+    expect(items[0].pwd).toBe('dyrs');
+    expect(items[1].url).toBe('https://www.aliyundrive.com/s/abc');
+  });
+
+  it('上游无结果返回 null / 坏 JSON / 非数组 → 空数组', () => {
+    expect(parseDriveItems('null')).toEqual([]);
+    expect(parseDriveItems('<html>检测页</html>')).toEqual([]);
+    expect(parseDriveItems('{"foo":1}')).toEqual([]);
+  });
+
+  it('parseBoxData：片名去掉季/集后缀，imdb 与 CDN 一并带出', () => {
+    const box = parseBoxData('<script>var box_data={ url:"https://box.dyrs.com.de", name:"中国尘封罪案实录", category:"dianying", imdb_id:"tt1234567", };</script>');
+    expect(box.boxName).toBe('中国尘封罪案实录');
+    expect(box.imdbId).toBe('tt1234567');
+    expect(box.cdnBase).toBe('https://box.dyrs.com.de');
+    expect(parseBoxData('<html></html>')).toEqual({ boxName: '', imdbId: '', cdnBase: '' });
   });
 });

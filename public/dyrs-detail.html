@@ -102,10 +102,53 @@ function render() {
 
     <div class="section-title"><h2>选线路 / 选集</h2></div>
     <div class="lines" id="lineBox"></div>
-    <div class="episodes" id="epBox"></div>`;
+    <div class="episodes" id="epBox"></div>
+
+    <div class="section-title" id="driveTitle" hidden><h2>云盘下载</h2></div>
+    <div class="drives" id="driveBox" hidden></div>`;
 
   renderLines();
   renderEpisodes();
+  loadDrive();
+}
+
+/**
+ * 云盘分享源：上游 /api/drive/list 是按 box_data.name（去掉季/集后缀）或 imdb_id 查的，
+ * 所以用详情接口返回的 boxName / imdbId，而不是页面标题。
+ * 没有分享资源时整块隐藏，不占版面。
+ */
+async function loadDrive() {
+  const box = document.getElementById('driveBox');
+  const title = document.getElementById('driveTitle');
+  if (!box || !title) return;
+
+  const imdb = /^tt\d+/.test(detail.imdbId || '') ? detail.imdbId : '';
+  const name = detail.boxName || detail.name || '';
+  if (!imdb && !name) return;
+
+  title.hidden = false;
+  box.hidden = false;
+  box.innerHTML = '<div class="state"><span class="spinner"></span> 正在找云盘分享…</div>';
+
+  try {
+    const r = await api(`/dyrs/site/drive?name=${encodeURIComponent(name)}${imdb ? `&imdb=${encodeURIComponent(imdb)}` : ''}`);
+    const items = r.items || [];
+    if (items.length === 0) {
+      box.hidden = true;
+      title.hidden = true;
+      return;
+    }
+    const DRIVE_NAMES = { baidu: '百度网盘', ali: '阿里云盘', aliyundrive: '阿里云盘' };
+    box.innerHTML = items.map((it) => `
+      <a class="drive-item" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">
+        <span class="drive-badge">${esc(DRIVE_NAMES[it.origin] || it.origin)}</span>
+        <span class="drive-name" title="${esc(it.filename)}">${esc(it.filename)}</span>
+        ${it.pwd ? `<span class="drive-pwd">提取码 ${esc(it.pwd)}</span>` : ''}
+      </a>`).join('');
+  } catch {
+    box.hidden = true;
+    title.hidden = true;
+  }
 }
 
 function renderLines() {
