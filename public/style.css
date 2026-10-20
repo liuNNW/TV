@@ -34,7 +34,7 @@ header.topbar {
   background: rgba(15, 17, 21, 0.92);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
-  padding: 10px 20px;
+  padding: 8px 20px;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -55,7 +55,7 @@ nav.main {
 }
 
 nav.main a {
-  padding: 5px 11px;
+  padding: 4px 10px;
   border-radius: 6px;
   color: var(--text-dim);
   transition: all .15s;
@@ -76,7 +76,7 @@ nav.main a.active { background: var(--accent); color: #fff; }
 .searchbox input {
   flex: 1;
   min-width: 0;
-  padding: 8px 12px;
+  padding: 7px 12px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--bg-2);
@@ -165,7 +165,7 @@ h3 { font-size: 15px; }
   padding: 10px;
 }
 
-.card .meta { padding: 8px 10px 10px; }
+.card .meta { padding: 7px 10px 9px; }
 
 .card .title {
   font-size: 13px;
@@ -237,11 +237,33 @@ h3 { font-size: 15px; }
   gap: 8px;
   justify-content: center;
   align-items: center;
-  margin: 24px 0 10px;
+  margin: 16px 0 8px;
   flex-wrap: wrap;
 }
 
 .pager .info { color: var(--text-dim); font-size: 13px; }
+
+/* ---------- 桌面首页：一页 20 张卡片完整落在首屏 ---------- */
+@media (min-width: 1600px) {
+  body.page-home main.wrap {
+    max-width: 1880px;
+    padding: 14px 20px 18px;
+  }
+  body.page-home .grid {
+    /* 20 条/页正好 10 列 × 2 行，底部不留半行 */
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: 14px;
+  }
+  body.page-home #catBox {
+    /* 分类再多也只占一行，不把卡片区往下挤 */
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-bottom: 10px;
+    padding-bottom: 2px;
+    scrollbar-width: thin;
+  }
+  body.page-home #catBox button { flex: 0 0 auto; }
+}
 
 /* ---------- 详情页 ---------- */
 .detail-head {
@@ -277,7 +299,7 @@ h3 { font-size: 15px; }
 
 .actions { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
 
-.lines { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.lines { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 
 .episodes {
   display: grid;
@@ -581,7 +603,7 @@ select:focus { border-color: var(--accent); }
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 22px 0 12px;
+  margin: 14px 0 10px;
 }
 .section-title h2 { margin: 0; }
 
