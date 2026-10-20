@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>播放 - 影视播放站</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="play-body">
+<header class="play-top">
+  <a class="back" href="javascript:history.length>1?history.back():location.href='index.html'">‹ 返回</a>
+  <div class="play-top-title" id="topTitle">加载中…</div>
+  <div class="play-top-right">
+    <button id="favBtn" class="ghost-btn">☆ 收藏</button>
+  </div>
+</header>
+
+<main class="play-main">
+  <div class="play-stage">
+    <div class="player-wrap" id="playerWrap">
+      <video id="video" playsinline preload="metadata"></video>
+      <div class="play-overlay" id="overlay">
+        <div class="inner" id="overlayInner"></div>
+      </div>
+    </div>
+
+    <div class="play-info">
+      <div class="now" id="nowTitle"></div>
+      <div class="now dim" id="nowMeta"></div>
+      <div class="controls">
+        <button id="prevBtn">⏮ 上一集</button>
+        <button id="nextBtn">⏭ 下一集</button>
+        <button id="retryBtn" title="重新加载当前这一集；片源不支持直连时会自动改用本机代理">🔄 重新加载</button>
+        <button id="setIntroBtn" title="把当前进度记为片头结束位置，同剧所有集生效">📍 设为片头</button>
+        <button id="setOutroBtn" title="把当前进度记为片尾开始位置，同剧所有集生效">📍 设为片尾</button>
+        <label class="switch"><input type="checkbox" id="skipToggle" checked> 跳过片头片尾</label>
+        <label class="switch"><input type="checkbox" id="autoNextToggle" checked> 自动连播</label>
+      </div>
+      <div class="hint">
+        快捷键：<kbd>空格</kbd> 播放/暂停 · <kbd>←</kbd><kbd>→</kbd> 快退/快进 10 秒 ·
+        <kbd>↑</kbd><kbd>↓</kbd> 音量 · <kbd>F</kbd> 全屏 · <kbd>M</kbd> 静音 · <kbd>P</kbd>/<kbd>N</kbd> 上/下一集<br>
+        双击画面全屏，滚轮调音量。进度每 5 秒自动保存，下次打开自动续播。片源不支持直连时会自动改用本机代理，两条链路都会自动跳过剧中广告。
+      </div>
+    </div>
+  </div>
+
+  <aside class="play-side">
+    <div class="side-tabs">
+      <button class="side-tab active" data-tab="ep">选集</button>
+      <button class="side-tab" data-tab="line">线路</button>
+    </div>
+    <div class="side-panel" id="epPanel">
+      <div class="episodes" id="epBox"></div>
+    </div>
+    <div class="side-panel hidden" id="linePanel">
+      <div class="lines-v" id="lineBox"></div>
+    </div>
+  </aside>
+</main>
+
+<script src="vendor/hls.min.js"></script>
+<script src="app.js"></script>
+<script src="player-ui.js"></script>
+<script>
+  // 详情页返回链接（供顶部「详情页」跳转需要时使用）
+  window.__detailParams = (function () {
+    const p = new URLSearchParams(location.search);
+    return {
+      id: p.get('id'), source: p.get('source'), name: p.get('name'),
+    };
+  })();
+</script>
+<script src="player.js"></script>
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>详情 - 影视播放站</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="wrap">
+  <div id="content">
+    <div class="state"><span class="spinner"></span> 加载中…</div>
+  </div>
+</main>
+
+<script src="app.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const videoId = params.get('id') || '';
+const source = params.get('source') || '';
+const fallbackName = params.get('name') || '';
+
+let detail = null;
+let lineIndex = 0;
+let progressMap = {};   // "line-ep" -> {position, duration}
+
+mountTopbar('detail.html');
+
+async function load() {
+  const box = document.getElementById('content');
+  if (!videoId) {
+    box.innerHTML = '<div class="state">缺少片目参数</div>';
+    return;
+  }
+
+  try {
+    // 带 name 校验，避免跨源 vod_id 撞车
+    const r = await api(`/detail?id=${encodeURIComponent(videoId)}&source=${encodeURIComponent(source)}&name=${encodeURIComponent(fallbackName)}`);
+    detail = r.detail;
+
+    // 详情没线路时按名字再找一次
+    if (detail && (!detail.lines || detail.lines.length === 0) && fallbackName) {
+      try {
+        const r2 = await api(`/detail-by-name?name=${encodeURIComponent(fallbackName)}&source=${encodeURIComponent(r.source)}`);
+        if (r2.detail && r2.detail.lines && r2.detail.lines.length) detail = r2.detail;
+      } catch { /* 保持原样 */ }
+    }
+
+    render();
+    loadProgress();
+  } catch (e) {
+    box.innerHTML = `<div class="state"><div class="big">⚠️</div>${esc(e.message)}<div style="margin-top:12px"><button class="primary" onclick="load()">重试</button></div></div>`;
+  }
+}
+
+function render() {
+  document.title = `${detail.name} - 影视播放站`;
+  const box = document.getElementById('content');
+
+  if (!detail.lines || detail.lines.length === 0) {
+    box.innerHTML = `<div class="err">这个片源没有可用的播放地址。${fallbackName ? '可以试试回首页搜索其他片源。' : ''}</div>`;
+    return;
+  }
+
+  const poster = detail.pic
+    ? `<img src="${esc(imgSrc(detail.pic))}" alt="" onerror="this.style.display='none'">`
+    : '';
+
+  const infoRows = [];
+  if (detail.year) infoRows.push(`<b>年份</b> ${esc(detail.year)}`);
+  if (detail.area) infoRows.push(`<b>地区</b> ${esc(detail.area)}`);
+  if (detail.lang) infoRows.push(`<b>语言</b> ${esc(detail.lang)}`);
+  if (detail.typeName) infoRows.push(`<b>类型</b> ${esc(detail.typeName)}`);
+  if (detail.remarks) infoRows.push(`<b>状态</b> ${esc(detail.remarks)}`);
+  if (detail.score && Number(detail.score) > 0) infoRows.push(`<b>评分</b> ${esc(detail.score)}`);
+
+  box.innerHTML = `
+    <div class="detail-head">
+      <div class="poster-lg">${poster}</div>
+      <div class="detail-info">
+        <h1>${esc(detail.name)}</h1>
+        ${detail.sub ? `<div class="row">别名：${esc(detail.sub)}</div>` : ''}
+        ${infoRows.map((r) => `<div class="row">${r}</div>`).join('')}
+        ${detail.director ? `<div class="row"><b>导演</b> ${esc(detail.director)}</div>` : ''}
+        ${detail.actor ? `<div class="row"><b>主演</b> ${esc(detail.actor.slice(0, 120))}</div>` : ''}
+        <div class="row"><b>片源</b> ${esc(detail.sourceName)}</div>
+        ${detail.content ? `<div class="plot" id="plot">${esc(detail.content)}</div>
+          <div style="margin-top:6px"><button onclick="document.getElementById('plot').classList.toggle('expanded')">展开/收起简介</button></div>` : ''}
+        <div class="actions">
+          <button class="primary" onclick="play(${firstPlayableIndex()}, 0)">▶ 播放第一集</button>
+          <button id="favBtn" onclick="toggleFav()">☆ 收藏</button>
+        </div>
+        ${detail.lines.some((l) => !l.playable) ? `<div class="hint">标 ⚠ 的线路给的是网页分享页，网页播放器可能拿不到视频流，建议用不带 ⚠ 的线路。</div>` : ''}
+      </div>
+    </div>
+
+    <div class="section-title"><h2>选线路 / 选集</h2></div>
+    <div class="lines" id="lineBox"></div>
+    <div class="episodes" id="epBox"></div>
+  `;
+
+  renderLines();
+  renderEpisodes();
+  refreshFav();
+}
+
+/** 默认落在第一条真正能播的线路上 */
+function firstPlayableIndex() {
+  const i = detail.lines.findIndex((l) => l.playable);
+  return i >= 0 ? i : 0;
+}
+
+function renderLines() {
+  const box = document.getElementById('lineBox');
+  box.innerHTML = detail.lines
+    .map((l, i) => {
+      const warn = l.playable ? '' : '（需浏览器打开，可能无法直接播放）';
+      return `<button class="${i === lineIndex ? 'active' : ''}" onclick="pickLine(${i})" title="${esc(l.name)}${esc(warn)}">${esc(l.name)} (${l.episodes.length})${l.playable ? '' : ' ⚠'}</button>`;
+    })
+    .join('');
+}
+
+function pickLine(i) {
+  lineIndex = i;
+  renderLines();
+  renderEpisodes();
+}
+
+function renderEpisodes() {
+  const box = document.getElementById('epBox');
+  const line = detail.lines[lineIndex];
+
+  box.innerHTML = line.episodes.map((e, i) => {
+    const p = progressMap[`${lineIndex}-${i}`];
+    let bar = '';
+    if (p && p.duration > 0 && p.position > 0) {
+      const pct = Math.min(100, (p.position / p.duration) * 100);
+      bar = `<span class="prog"><i style="width:${pct.toFixed(1)}%"></i></span>`;
+    }
+    return `<div class="ep" onclick="play(${lineIndex}, ${i})" title="${esc(e.name)}">${esc(e.name)}${bar}</div>`;
+  }).join('');
+}
+
+function play(li, ei) {
+  const item = { id: detail.id, source: detail.source, name: detail.name, pic: detail.pic, year: detail.year };
+  location.href = playHref(item, li, ei);
+}
+
+/* 已看进度：从历史里取，画在选集上 */
+async function loadProgress() {
+  try {
+    const r = await api('/history');
+    for (const h of r.items) {
+      if (h.id === detail.id && h.source === detail.source) {
+        progressMap[`${h.lineIndex}-${h.episodeIndex}`] = { position: h.position, duration: h.duration };
+      }
+    }
+    renderEpisodes();
+  } catch { /* 忽略 */ }
+}
+
+async function refreshFav() {
+  const btn = document.getElementById('favBtn');
+  try {
+    const r = await api(`/favorite-status?id=${encodeURIComponent(detail.id)}&source=${encodeURIComponent(detail.source)}`);
+    btn.textContent = r.favorite ? '★ 已收藏' : '☆ 收藏';
+    btn.classList.toggle('active', r.favorite);
+  } catch { /* 忽略 */ }
+}
+
+async function toggleFav() {
+  try {
+    const r = await api(`/favorite-status?id=${encodeURIComponent(detail.id)}&source=${encodeURIComponent(detail.source)}`);
+    if (r.favorite) {
+      await api(`/favorites?id=${encodeURIComponent(detail.id)}&source=${encodeURIComponent(detail.source)}`, { method: 'DELETE' });
+      toast('已取消收藏');
+    } else {
+      await api('/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: detail.id, name: detail.name, source: detail.source, pic: detail.pic, year: detail.year }),
+      });
+      toast('已加入收藏');
+    }
+    refreshFav();
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+load();
+</script>
+</body>
+</html>

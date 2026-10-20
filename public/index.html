@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>影视播放站</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="wrap">
+  <div class="section-title">
+    <h2 id="headTitle">最新更新</h2>
+    <span id="srcHint" class="badge"></span>
+  </div>
+
+  <!-- 只显示「当前频道」下的分类，不再把全部分类平铺 -->
+  <div class="lines" id="catBox" style="margin-bottom:16px"></div>
+
+  <div id="content">
+    <div class="state"><span class="spinner"></span> 加载中…</div>
+  </div>
+  <div id="pager" class="pager"></div>
+</main>
+
+<script src="app.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const wd = params.get('wd') || '';
+let channelName = params.get('ch') || '';       // 频道名，如「电影」
+let catName = params.get('cat') || '';          // 频道下的分类名，如「动作片」
+let sourceId = params.get('source') || '';      // 具体用哪个源
+let typeId = params.get('type') || '';          // 该源下的分类 id
+let page = Math.max(1, Number(params.get('page')) || 1);
+
+mountTopbar(channelName ? `index.html?ch=${encodeURIComponent(channelName)}` : 'index.html');
+
+const content = document.getElementById('content');
+const pager = document.getElementById('pager');
+const catBox = document.getElementById('catBox');
+
+let channelsCache = null;
+
+/**
+ * 渲染令牌。
+ * 补封面是异步的，如果用户快速切分类/翻页，旧的补封面回调
+ * 可能在新渲染之后才返回，把页面覆盖回旧内容。用令牌丢弃过期回调。
+ */
+let renderToken = 0;
+
+/** 拉频道分组（后端已归并 + 过滤僵尸分类） */
+async function loadChannels() {
+  if (channelsCache) return channelsCache;
+  const r = await api('/channels');
+  channelsCache = r.channels || [];
+  return channelsCache;
+}
+
+/** 渲染当前频道的分类行；返回解析后的频道对象 */
+async function renderCategories() {
+  if (wd) { catBox.innerHTML = ''; return null; }
+
+  try {
+    const channels = await loadChannels();
+    if (!channels.length) { catBox.innerHTML = ''; return null; }
+
+    // 没指定频道就默认取第一个（电影）
+    if (!channelName) channelName = channels[0].name;
+    const ch = channels.find((c) => c.name === channelName) || channels[0];
+    channelName = ch.name;
+
+    // 没指定分类就默认选该频道下条数最多的那个，
+    // 避免一进来就落在没内容的分类上
+    if (!catName && ch.categories.length > 0) {
+      catName = ch.categories[0].name;
+      // 同步到地址栏，翻页时不会丢
+      const q = new URLSearchParams(location.search);
+      q.set('ch', channelName);
+      q.set('cat', catName);
+      history.replaceState(null, '', `index.html?${q}`);
+    }
+
+    catBox.innerHTML = ch.categories
+      .map((c) => {
+        const active = c.name === catName ? ' active' : '';
+        return `<button class="${active}" onclick="pickCat('${esc(c.name)}')">${esc(c.name)} <span style="opacity:.6">${c.total}</span></button>`;
+      })
+      .join('');
+
+    return ch;
+  } catch {
+    catBox.innerHTML = '';
+    return null;
+  }
+}
+
+function pickCat(name) {
+  const q = new URLSearchParams();
+  q.set('ch', channelName);
+  q.set('cat', name);
+  location.href = `index.html?${q}`;
+}
+
+/**
+ * 从分类名解析出要请求的 source + type id。
+ *
+ * 关键：分类 id 各源不通用，而且**各源同类分类的 id 可能恰好相同但含义不同**
+ * （剧情片在 lziapi 是 t=11、在 wujinapi 也是 t=11，但片子完全不同）。
+ * 所以必须记住「用哪个源取列表」，补封面时要用同一个源，
+ * 否则会把 A 站的 id 拿去 B 站查，一条都匹配不上。
+ */
+async function resolveCategory() {
+  if (!catName) return false;
+  if (sourceId && typeId) return true;
+
+  const r = await api('/categories');
+  const c = (r.categories || []).find((x) => x.name === catName);
+  if (!c || !c.refs.length) return false;
+
+  // 优先用第一个可用源的引用；列表接口本身也会做故障转移，
+  // 但补封面必须与列表实际使用的源一致，所以这里只选一个候选，
+  // 并由 list 接口返回的 source 作为最终依据（见 load 里的处理）。
+  const ref = c.refs[0];
+  sourceId = ref.source;
+  typeId = ref.id;
+  return true;
+}
+
+async function load() {
+  pager.innerHTML = '';
+  document.getElementById('headTitle').textContent = wd
+    ? `搜索「${wd}」`
+    : (catName || channelName || '最新更新');
+
+  content.innerHTML = '<div class="state"><span class="spinner"></span> 加载中…</div>';
+
+  try {
+    if (wd) {
+      const r = await api(`/search?wd=${encodeURIComponent(wd)}`);
+      document.getElementById('srcHint').textContent = `命中 ${r.total} 条`;
+
+      if (r.items.length === 0) {
+        content.innerHTML = `<div class="state"><div class="big">🔍</div>没有找到「${esc(wd)}」
+          <div style="margin-top:8px;font-size:13px">换个关键词或更短的片名试试</div></div>`;
+        return;
+      }
+      let html = '';
+      if (r.failed && r.failed.length) {
+        html += `<div class="err">部分片源暂时不可用（${esc(r.failed.join('、'))}），已展示其余结果。</div>`;
+      }
+      html += `<div class="grid">${r.items.map(renderCard).join('')}</div>`;
+      content.innerHTML = html;
+
+      // 搜索结果同样异步补封面（每条自带 source，无需外部传入）
+      const token = ++renderToken;
+      enrichCovers(r.items, '', () => {
+        if (token !== renderToken) return;
+        content.innerHTML = `<div class="grid">${r.items.map(renderCard).join('')}</div>`;
+      });
+      return;
+    }
+
+    // 分类页：解析出真正的 source/type
+    if (catName) {
+      const ok = await resolveCategory();
+      if (!ok) {
+        content.innerHTML = `<div class="state">没有找到分类「${esc(catName)}」<div style="margin-top:10px"><button class="primary" onclick="location.href='index.html'">回首页</button></div></div>`;
+        return;
+      }
+    }
+
+    const url = `/list?page=${page}`
+      + (typeId ? `&type=${encodeURIComponent(typeId)}` : '')
+      + (sourceId ? `&source=${encodeURIComponent(sourceId)}` : '');
+
+    const r = await api(url);
+    document.getElementById('srcHint').textContent = `片源: ${r.source}`;
+
+    // 列表做了故障转移，实际用的源可能不是我们请求的那个。
+    // 补封面必须用「实际返回的源」，否则拿 A 站的 id 去 B 站查，一条都匹配不上。
+    sourceId = r.source;
+
+    if (!r.items.length) {
+      content.innerHTML = '<div class="state">这一页没有内容</div>';
+      return;
+    }
+
+    const grid = () => `<div class="grid">${r.items.map(renderCard).join('')}</div>`;
+    content.innerHTML = grid();
+
+    pager.innerHTML = `
+      <button ${page <= 1 ? 'disabled' : ''} onclick="go(${page - 1})">上一页</button>
+      <span class="info">第 ${r.page} / ${r.pageCount} 页 · 共 ${r.total} 部</span>
+      <button ${page >= r.pageCount ? 'disabled' : ''} onclick="go(${page + 1})">下一页</button>
+      <button onclick="go(1)">首页</button>
+    `;
+
+    // 页面已经出来了，再异步补封面（不阻塞渲染）
+    const token = ++renderToken;
+    enrichCovers(r.items, r.source, () => {
+      // 期间用户可能已经切了分类/翻页，丢弃过期回调
+      if (token !== renderToken) return;
+      content.innerHTML = grid();
+    });
+  } catch (e) {
+    content.innerHTML = `<div class="state"><div class="big">⚠️</div>${esc(e.message)}
+      <div style="margin-top:12px"><button class="primary" onclick="load()">重试</button></div></div>`;
+  }
+}
+
+function go(n) {
+  if (n < 1) return;
+  page = n;
+  const q = new URLSearchParams();
+  if (channelName) q.set('ch', channelName);
+  if (catName) q.set('cat', catName);
+  q.set('page', String(n));
+  history.pushState(null, '', `index.html?${q}`);
+  load();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/**
+ * 启动顺序很重要。
+ *
+ * 首次 /api/channels 要做分类探测（几十个上游请求），不能阻塞首屏。
+ * 但「先无条件 load() 再等频道回来 load()」会重复请求同一页，
+ * 而且两次渲染会互相覆盖（第二次渲染时补封面结果就丢了）。
+ *
+ * 所以这里做一个简单取舍：
+ *   - 带 cat 参数（从分类按钮点进来）→ 直接 load()，不等频道
+ *   - 没带 cat → 等频道拿到默认分类后再 load()，只加载一次
+ * 分类行本身依旧异步渲染，不阻塞。
+ */
+const hasCatParam = !!params.get('cat');
+
+if (hasCatParam) {
+  load();
+  renderCategories();
+} else {
+  // 首页：先显示加载态，拿到默认分类后一次加载到位
+  renderCategories().then(() => load());
+}
+</script>
+</body>
+</html>

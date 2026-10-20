@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>我的收藏 - 影视播放站</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="wrap">
+  <div class="section-title"><h2>我的收藏</h2></div>
+  <div id="content"><div class="state"><span class="spinner"></span> 加载中…</div></div>
+</main>
+
+<script src="app.js"></script>
+<script>
+mountTopbar('favorites.html');
+
+async function load() {
+  const box = document.getElementById('content');
+  try {
+    const r = await api('/favorites');
+    if (!r.items.length) {
+      box.innerHTML = '<div class="state"><div class="big">☆</div>还没有收藏<div style="margin-top:8px;font-size:13px">在详情页或播放页点「收藏」即可加入</div></div>';
+      return;
+    }
+    box.innerHTML = `<div class="grid">${r.items.map((f) => renderCard({
+      id: f.id, name: f.name, source: f.source, pic: f.pic, year: f.year,
+    })).join('')}</div>`;
+  } catch (e) {
+    box.innerHTML = `<div class="state">${esc(e.message)}</div>`;
+  }
+}
+
+load();
+</script>
+</body>
+</html>

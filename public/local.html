@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e1014">
+<title>本地媒体 - 影视播放站</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="local-ui.css">
+<!-- 播放器用到的两个软解库都是「按需加载」的，提前握手/预取能省掉几百毫秒 -->
+<link rel="preconnect" href="./" crossorigin>
+<link rel="prefetch" href="vendor/hls.min.js" as="script">
+<link rel="prefetch" href="vendor/mpegts.js" as="script">
+</head>
+<body class="fn-dark">
+<main id="app"><div class="fn-loading"><div class="ring"></div>正在加载…</div></main>
+
+<script src="app.js"></script>
+<script src="player-ui.js"></script>
+<script src="covers.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const playPath = params.get('play');
+const curPath = params.get('path') || '';
+const rootId = params.get('root') || 'auto';            // auto = 自动探测到的视频目录
+const view = params.get('view') === 'browse' ? 'browse' : 'library';
+
+const app = document.getElementById('app');
+
+function esc(s) { return String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+function fmtSize(n) {
+  if (!n) return '';
+  const u = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let i = 0;
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+  return n.toFixed(n >= 100 ? 0 : 1) + ' ' + u[i];
+}
+
+function fmtDur(sec) {
+  if (!sec || !isFinite(sec)) return '';
+  const m = Math.round(sec / 60);
+  return m >= 60 ? `${Math.floor(m / 60)} 小时 ${m % 60} 分` : `${m} 分钟`;
+}
+
+/** 拼查询参数：自动带上当前 root / path，extra 可覆盖（空值不拼） */
+function q(extra) {
+  const p = new URLSearchParams();
+  if (rootId && rootId !== 'auto') p.set('root', rootId);
+  if (curPath) p.set('path', curPath);
+  if (extra) {
+    for (const [k, v] of Object.entries(extra)) {
+      if (v === undefined || v === null || v === '') continue;
+      p.set(k, v);
+    }
+  }
+  return p.toString();
+}
+
+/** 页面地址（切换视图 / 进入子目录） */
+function pageHref(root, path, v) {
+  const p = new URLSearchParams();
+  if (root && root !== 'auto') p.set('root', root);
+  if (path) p.set('path', path);
+  if (v && v !== 'library') p.set('view', v);
+  const s = p.toString();
+  return 'local.html' + (s ? '?' + s : '');
+}
+
+/** 指向某个文件的原始地址（始终是 HTTP，浏览器不能读本地路径） */
+function fileUrl(relPath, root) {
+  const p = new URLSearchParams();
+  const r = root || rootId;
+  if (r && r !== 'auto') p.set('root', r);
+  p.set('path', relPath);
+  return 'api/local/file?' + p.toString();
+}
+
+/** 服务端抽帧封面地址 */
+function coverUrl(relPath) {
+  const p = new URLSearchParams();
+  if (rootId && rootId !== 'auto') p.set('root', rootId);
+  p.set('path', relPath);
+  return 'api/local/cover?' + p.toString();
+}
+
+function extOf(p) {
+  const m = String(p || '').match(/\.([a-z0-9]+)$/i);
+  return m ? m[1].toLowerCase() : '';
+}
+
+/** 从文件名里猜集数，给海报角标用（第03集 / S01E03 / EP03 / 03） */
+function episodeOf(name) {
+  const s = String(name || '');
+  let m = s.match(/[Ss]\d{1,2}[Ee](\d{1,3})/);
+  if (m) return Number(m[1]);
+  m = s.match(/第\s*(\d{1,3})\s*[集话話期]/);
+  if (m) return Number(m[1]);
+  m = s.match(/[Ee][Pp]?\s*(\d{1,3})(?!\d)/);
+  if (m) return Number(m[1]);
+  m = s.match(/[\.\-_ ](\d{1,3})[\.\-_ ]?(?:[\[\(]|$)/);
+  if (m) return Number(m[1]);
+  return 0;
+}
+
+/** 按需加载脚本（mpegts / hls 只在用到时才下载） */
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = res;
+    s.onerror = () => rej(new Error(src + ' 加载失败'));
+    document.head.appendChild(s);
+  });
+}
+
+/* ---------------- 顶部栏 ---------------- */
+
+let dirsCache = [];
+let autoRoot = '';
+
+async function loadDirs() {
+  try {
+    const r = await api('/local/dirs');
+    dirsCache = r.dirs || [];
+    autoRoot = r.auto || '';
+  } catch {
+    dirsCache = [];
+    autoRoot = '';
+  }
+}
+
+function rootsBarHtml() {
+  const chip = (id, label, active, removable, name) => `
+    <span class="fn-chip${active ? ' active' : ''}" title="${esc(label)}">
+      <a href="${pageHref(id, '', view)}">${esc(label)}</a>
+      ${removable ? `<button class="fn-x" data-del="${id}" data-name="${esc(name)}" title="移除这个入口">✕</button>` : ''}
+    </span>`;
+  return chip('auto', autoRoot ? `默认目录` : '默认目录', rootId === 'auto', false, '') +
+    dirsCache.map((d) => chip(d.id, d.name, rootId === d.id, true, d.name)).join('');
+}
+
+function bindRoots(scope) {
+  scope.querySelectorAll('[data-del]').forEach((b) => {
+    b.onclick = async () => {
+      if (!confirm(`移除快捷入口「${b.dataset.name}」？\n不会删除任何文件，只是不在列表里显示了。`)) return;
+      try {
+        await api(`/local/dirs?id=${encodeURIComponent(b.dataset.del)}`, { method: 'DELETE' });
+        toast('已移除');
+        await loadDirs();
+        b.closest('.fn-chip').remove();
+      } catch (e) {
+        toast(e.message);
+      }
+    };
+  });
+}
+
+function topbarHtml(extraRight) {
+  return `
+    <header class="fn-top">
+      <div class="fn-brand"><span class="dot"></span>本地媒体</div>
+      <a class="fn-back-home" href="index.html">← 返回影视站</a>
+      <div class="fn-roots" id="rootBar"></div>
+      <div class="fn-actions">
+        ${extraRight || ''}
+        <button class="fn-btn" id="diagBtn" title="检查 ffmpeg 与硬解支持">⚙<span class="txt"> 诊断</span></button>
+      </div>
+    </header>`;
+}
+
+function addBoxHtml() {
+  return `
+    <div class="fn-add" id="addBox" hidden>
+      <input id="dirPath" placeholder="视频文件夹的绝对路径，NAS 上例如 /vol1/1000/movies" autocomplete="off">
+      <input id="dirName" placeholder="显示名称（可留空）" autocomplete="off" style="flex:0 1 180px">
+      <button class="fn-btn primary" id="dirAdd">添加</button>
+      <button class="fn-btn" id="dirCancel">取消</button>
+      <span style="color:var(--fn-dim);font-size:12.5px" id="dirMsg"></span>
+    </div>`;
+}
+
+function bindAddBox() {
+  const addBtn = document.getElementById('addDirBtn');
+  if (addBtn) {
+    addBtn.onclick = () => {
+      const box = document.getElementById('addBox');
+      box.hidden = !box.hidden;
+      if (!box.hidden) document.getElementById('dirPath').focus();
+    };
+  }
+  const cancel = document.getElementById('dirCancel');
+  if (cancel) {
+    cancel.onclick = () => {
+      document.getElementById('addBox').hidden = true;
+      document.getElementById('dirMsg').textContent = '';
+    };
+  }
+  const add = document.getElementById('dirAdd');
+  if (add) add.onclick = addDir;
+  const path = document.getElementById('dirPath');
+  if (path) path.addEventListener('keydown', (e) => { if (e.key === 'Enter') addDir(); });
+}
+
+async function addDir() {
+  const msg = document.getElementById('dirMsg');
+  const path = document.getElementById('dirPath').value.trim();
+  const name = document.getElementById('dirName').value.trim();
+  if (!path) { msg.textContent = '请填写路径'; return; }
+  msg.textContent = '正在添加…';
+  try {
+    await api('/local/dirs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path, name }),
+    });
+    toast('已添加，正在打开…');
+    location.href = pageHref('auto', '', view);
+  } catch (e) {
+    msg.textContent = '✗ ' + e.message;
+  }
+}
+
+function emptyHint() {
+  return `<div class="fn-empty">
+    <b>还没有视频目录。</b><br>
+    ① 把视频拷进播放站目录里的 <code>videos</code> 文件夹，刷新本页即可；<br>
+    ② 或点右上角 <b>「＋ 目录」</b>，填视频文件夹的绝对路径（NAS 上例如 <code>/vol1/1000/movies</code>）。<br>
+    两者可以共存，点 ✕ 只是移除入口，不会删除任何文件。
+  </div>`;
+}
+
+/* ---------------- 诊断弹层 ---------------- */
+
+async function openDiag() {
+  const box = document.createElement('div');
+  box.className = 'fn-modal';
+  box.innerHTML = `<div class="plate"><h3>运行环境诊断</h3>
+    <div class="sub">正在检测 ffmpeg 与硬件编码器…</div></div>`;
+  box.onclick = (e) => { if (e.target === box) box.remove(); };
+  document.body.appendChild(box);
+  const plate = box.querySelector('.plate');
+
+  let d;
+  try {
+    d = await api('/local/diag' + (box.dataset.rescan ? '?rescan=1' : ''));
+  } catch (e) {
+    plate.querySelector('.sub').innerHTML = '检测失败：' + esc(e.message);
+    return;
+  }
+
+  const row = (k, v, cls) => `<dt>${esc(k)}</dt><dd class="${cls || ''}">${esc(v || '—')}</dd>`;
+  plate.innerHTML = `
+    <h3>运行环境诊断</h3>
+    <div class="sub">
+      网页能播什么，完全由浏览器的解码器决定：只认 <b>H.264 + AAC/MP3</b>。
+      飞牛影视这类原生 App 之所以“什么都能播”，是因为它会在 NAS 上转码（并常用硬件加速）。
+      这一页就是检查这台 NAS 能不能帮浏览器转码。
+    </div>
+    <dl class="fn-kv">
+      ${row('系统', d.platform + ' · Node ' + d.node)}
+      ${row('ffmpeg', d.ffmpegFound ? d.ffmpeg : '✗ 没找到（转码与封面抽帧都用不了）', d.ffmpegFound ? 'good' : 'bad')}
+      ${row('ffmpeg 版本', d.version ? d.version.replace(/^ffmpeg version\s*/i, '').slice(0, 60) : '')}
+      ${row('ffprobe', d.ffprobe || '✗ 没有（会自动改用 ffmpeg 读编码）', d.ffprobe ? 'good' : '')}
+      ${row('硬件编码器', d.hwEncoders && d.hwEncoders.length ? d.hwEncoders.join(', ') : '无（只能 CPU 软编）')}
+      ${row('实际使用', d.pickedEncoder, /qsv|nvenc|vaapi|videotoolbox|amf|v4l2/.test(d.pickedEncoder) ? 'good' : '')}
+      ${row('正在转码', d.activeTranscodes + ' 路')}
+      ${row('转码缓存占用', d.transcodeDiskMB + ' MB')}
+    </dl>
+    <div class="sub">
+      <b>没有 ffmpeg 怎么办？</b><br>
+      按下「重新检测」前，先在 NAS 上装一个：SSH 执行 <code>sudo apt install -y ffmpeg</code>。
+      随包依赖（@ffmpeg-installer）装好的话这里会自动出现路径。<br>
+      另外：飞牛影视自带的 ffmpeg 也会被自动搜索到（会扫 /vol1、/usr/trim、/var/apps 等目录）。
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="fn-btn primary" id="diagRescan">重新检测</button>
+      <button class="fn-btn" id="diagClose">关闭</button>
+    </div>`;
+
+  plate.querySelector('#diagClose').onclick = () => box.remove();
+  plate.querySelector('#diagRescan').onclick = async () => {
+    box.dataset.rescan = '1';
+    box.remove();
+    await openDiag();
+  };
+}
+
+/* ================= 播放页 ================= */
+
+const TS_EXTS = new Set(['ts', 'mts', 'm2ts', 'm2s', 'tp', 'trp', 'tod']);
+const FLV_EXTS = new Set(['flv', 'f4v']);
+/** 浏览器基本无解、只能转码的老格式 */
+const UNDECODABLE = new Set(['avi', 'divx', 'wmv', 'asf', 'mpg', 'mpeg', 'mpe', 'm1v', 'm2v', 'vob', 'rm', 'rmvb', 'mxf', 'dv', '3gp', '3g2']);
+
+if (playPath) {
+  document.body.classList.add('fn-playing');
+  initPlay();
+} else if (view === 'browse') {
+  initBrowser();
+} else {
+  initLibrary();
+}
+
+function initPlay() {
+  const name = decodeURIComponent(playPath.split('/').pop() || '视频');
+  const ext = extOf(playPath);
+  const kind = params.get('kind') === 'audio' ? 'audio' : 'video';
+  const coverRel = params.get('cover') || '';
+  const poster = coverRel ? fileUrl(coverRel) : '';
+  const src = fileUrl(playPath);
+  document.title = `${name} - 本地播放`;
+
+  app.innerHTML = `
+    <div class="fn-play">
+      <div class="fn-play-top">
+        <a class="plate" href="${pageHref(rootId, curPath, view)}" title="返回">←</a>
+        <div class="fn-play-title">${esc(name)}
+          <small id="codecLine">${kind === 'audio' ? '音频' : '视频'} · ${esc(ext.toUpperCase())}</small>
+        </div>
+        <button class="fn-btn" id="diagBtn" title="检查 ffmpeg 与转码环境">⚙<span class="txt"> 诊断</span></button>
+      </div>
+      <div class="fn-stage">
+        <div class="player-wrap">
+          <video id="video" autoplay playsinline preload="metadata" x5-video-player-type="h5" disableRemotePlayback${poster ? ` poster="${esc(poster)}"` : ''}></video>
+          <div class="play-overlay hidden" id="overlay"><div class="inner" id="overlayInner"></div></div>
+        </div>
+      </div>
+      <div class="fn-under">
+        <div class="actions">
+          <button class="fn-btn" id="checkBtn">🩺 检测文件</button>
+          <button class="fn-btn" id="retryBtn" hidden>🔁 重新转码</button>
+          <a class="fn-btn" href="${src}" target="_blank" rel="noopener">🎬 打开视频直链</a>
+          <a class="fn-btn" href="${src}" download>⬇ 下载原文件</a>
+        </div>
+        <div id="status"></div>
+        <div id="checkOut"></div>
+      </div>
+    </div>`;
+
+  const v = document.getElementById('video');
+  if (window.initPlayerUI) initPlayerUI(v, { title: name, keyboard: true, poster });
+
+  const statusEl = document.getElementById('status');
+  const checkOut = document.getElementById('checkOut');
+  const retryBtn = document.getElementById('retryBtn');
+  const codecLine = document.getElementById('codecLine');
+
+  function say(html, cls) {
+    statusEl.innerHTML = `<div class="fn-status ${cls || ''}">${html}</div>`;
+  }
+  function clearSay() { statusEl.innerHTML = ''; }
+
+  let hlsPlayer = null;
+  let statusTimer = null;
+  let totalSec = 0;
+  let startedKey = '';
+
+  function stopStatus() {
+    if (statusTimer) { clearInterval(statusTimer); statusTimer = null; }
+  }
+  function destroyHls() {
+    stopStatus();
+    if (hlsPlayer) { try { hlsPlayer.destroy(); } catch { /* ignore */ } hlsPlayer = null; }
+  }
+  window.addEventListener('pagehide', destroyHls);
+
+  /* ---- 用 NAS 实时转码（HLS）播放 ---- */
+  function playTranscode(url) {
+    loadScript('vendor/hls.min.js').then(() => {
+      destroyHls();
+      retryBtn.hidden = false;
+      const nativeHls = !!v.canPlayType('application/vnd.apple.mpegurl');
+      if (window.Hls && Hls.isSupported()) {
+        hlsPlayer = new Hls({
+          // 转码刚起步时播放列表还没生成，多留几次重试
+          manifestLoadingMaxRetry: 30,
+          manifestLoadingRetryDelay: 1500,
+          levelLoadingMaxRetry: 15,
+          fragLoadingMaxRetry: 15,
+          // 转码是「现转现出」，分片是按需生成的：
+          // 拉太急只会一路 404/503 然后疯狂重试，白白拖慢出画面；
+          // 给一个温和的重试节奏反而更快看到第一帧。
+          fragLoadingRetryDelay: 1000,
+          levelLoadingRetryDelay: 1000,
+          // 抗卡顿的核心：把前向缓冲目标拉高到 60 秒、上限 120 秒。
+          // 默认值偏小（30s），转码速度偶尔追不上播放速度时就直接卡住。
+          maxBufferLength: 60,
+          maxMaxBufferLength: 120,
+          maxBufferSize: 120 * 1000 * 1000,
+          backBufferLength: 30,
+          // 起播优先：先拉到一小段就立刻开播，不等整个缓冲填满
+          startLevel: -1,
+          // 让 hls.js 自己按带宽挑清晰度（本地网络基本只有一个档位，不影响）
+          abrEwmaDefaultEstimate: 2_000_000,
+        });
+        hlsPlayer.loadSource(url);
+        hlsPlayer.attachMedia(v);
+        hlsPlayer.on(Hls.Events.ERROR, (_e, data) => {
+          if (!data || !data.fatal) return;
+          if (data.type === Hls.ErrorTypes.MEDIA_ERROR) { hlsPlayer.recoverMediaError(); return; }
+          stopStatus();
+          say(`转码播放出错（${esc(String(data.details || data.type || ''))}）。可以点「重新转码」再试一次；`
+            + `如果一直失败，说明这台 NAS 转不动这个文件，先把原文件下载下来用本地播放器看。`, 'err');
+          destroyHls();
+        });
+      } else if (nativeHls) {
+        // iPhone Safari 原生就能播 HLS，不用 hls.js
+        v.src = url;
+      } else {
+        say('当前浏览器不支持 MSE，没法转码播放。请换 Chrome / Edge / 手机自带浏览器再打开本站。', 'err');
+        return;
+      }
+
+      v.addEventListener('playing', () => { stopStatus(); clearSay(); }, { once: true });
+
+      const key = startedKey || String(url.split('/')[4] || '');
+      // 3 秒一次而不是 2 秒：这只是给用户看进度用的，没必要那么频繁地打服务端。
+      // 画面一出来就停（上面 playing 事件已经做了），不会一直空转。
+      statusTimer = setInterval(async () => {
+        try {
+          const s = await api(`/local/transcode/status?key=${encodeURIComponent(key)}`);
+          if (s.state === 'failed') {
+            stopStatus();
+            say(`转码失败了：${esc(s.error || '未知原因')}<br>点上面的「🔁 重新转码」可以换一种编码方式再试。`, 'err');
+            return;
+          }
+          if (s.state === 'stalled') {
+            stopStatus();
+            say(`转码卡住了：${esc(s.error || '长时间没有新分片')}<br>点「🔁 重新转码」再试一次。`, 'err');
+            return;
+          }
+          if (s.state === 'unknown') return;
+
+          const pct = totalSec > 0 ? Math.min(100, (s.seconds / totalSec) * 100) : 0;
+          const bar = `<div class="fn-progress"><i style="width:${pct.toFixed(1)}%"></i></div>`;
+          const enc = s.encoder && s.encoder !== 'cached' ? `<b>${esc(s.encoder)}</b>` : '硬件/软件编码';
+          say(
+            `正在用 NAS 转成网页能播的 H.264… 已转出 <b>${Math.round(s.seconds)}</b> 秒`
+            + (totalSec ? ` / 全长约 ${Math.round(totalSec)} 秒` : '')
+            + `　编码器 ${enc}`
+            + bar
+            + `<span style="color:var(--fn-dim)">首次出画面一般 5~20 秒；转码期间进度条只能拖到已转出的位置。<br>`
+            + `如果一直在转却没画面，多半是夸克/UC 这类浏览器劫持了网页播放器，换 Chrome、Edge 或手机自带浏览器试试。</span>`,
+          );
+          if (s.state === 'done') stopStatus();
+        } catch { /* 轮询失败不打扰播放 */ }
+      }, 3000);
+
+      v.play().catch(() => {});
+    }).catch(() => say('hls.js 加载失败，请刷新重试。', 'err'));
+  }
+
+  /* ---- 请求 NAS 开始转码 ---- */
+  // knownInfo / knownTotal：调用方已经拿到的探测结果，传进来就不用再问一遍服务端
+  async function startTranscode(reasonTxt, force, knownInfo) {
+    if (knownInfo) {
+      const parts = [knownInfo.codec, knownInfo.audio && `音频 ${knownInfo.audio}`, knownInfo.width && `${knownInfo.width}×${knownInfo.height}`];
+      codecLine.textContent = parts.filter(Boolean).join(' · ').toUpperCase();
+      totalSec = Number(knownInfo.duration) || 0;
+    } else {
+      // 兜底：调用方没带信息时才自己去探（服务端有 5 分钟缓存，不会真的重跑 ffprobe）
+      const plan = await api(`/local/playplan?${q({ path: playPath })}`).catch(() => null);
+      if (plan && plan.info) {
+        const parts = [plan.info.codec, plan.info.audio && `音频 ${plan.info.audio}`, plan.info.width && `${plan.info.width}×${plan.info.height}`];
+        codecLine.textContent = parts.filter(Boolean).join(' · ').toUpperCase();
+        totalSec = Number(plan.info.duration) || 0;
+      }
+    }
+    say(`正在让 NAS 把这段视频转成网页能播的 H.264…`
+      + (reasonTxt ? `<br><b>${esc(reasonTxt)}</b>` : '')
+      + `<br><span style="color:var(--fn-dim)">这就是飞牛影视能播、网页播不了的原因：它是在 NAS 上转码的，网页只能等转码。</span>`);
+    try {
+      const r = await api(`/local/transcode/start?${q({ path: playPath, h: 720 })}${force ? '&force=1' : ''}`);
+      startedKey = r.key || '';
+      playTranscode(r.url);
+    } catch (e) {
+      say(`${esc(reasonTxt || '这个文件的编码浏览器不支持')}。<br>自动转码也没成功：<b>${esc(e.message)}</b><br>`
+        + `可以点上面「⚙ 诊断」看看 NAS 上到底有没有 ffmpeg；也可以先下载原文件用本地播放器看。`, 'err');
+    }
+  }
+
+  /* ---- 先探编码，再决定怎么播 ---- */
+  async function decide() {
+    if (UNDECODABLE.has(ext)) {
+      startTranscode(`.${ext} 是浏览器无法解码的老格式`);
+      return;
+    }
+
+    // 关键优化：不再「等探完编码才设 src」。
+    // 老代码 await playplan 之后才 v.src = src，等于让用户对着黑屏多等一次 ffprobe
+    // （机械盘上经常 1~2 秒）。现在改成「先起播，探测并行跑」：
+    //   - 探测回来是 transcode → 立刻切转码
+    //   - 探测回来是 direct   → 什么都不用做，画面早就出来了
+    //   - 探测回来是 mpegts   → 只有 TS/FLV 需要抢跑切软解，那就早点切
+    let probed = false;
+    let cancelled = false;
+
+    const planPromise = api(`/local/playplan?${q({ path: playPath })}`)
+      .then((p) => { probed = true; return p; })
+      .catch(() => null);
+
+    // 先挂上「直连失败就转码」的兜底，再立刻起播
+    v.addEventListener('error', () => {
+      if (cancelled) return;
+      const code = v.error ? v.error.code : 0;
+      if (code === 1 || code === 2) {
+        say('读取视频失败：网络错误或文件不存在，确认文件还在原位置。', 'err');
+        return;
+      }
+      startTranscode('');
+    }, { once: true });
+
+    // 老格式容器（avi/rmvb…）已知必转：那就不用等探测
+    v.src = src;
+    v.play().catch(() => {});
+
+    const plan = await planPromise;
+    if (!probed) return;
+
+    if (plan && plan.info) {
+      const parts = [plan.info.codec, plan.info.audio && `音频 ${plan.info.audio}`, plan.info.width && `${plan.info.width}×${plan.info.height}`];
+      codecLine.textContent = parts.filter(Boolean).join(' · ').toUpperCase();
+      totalSec = Number(plan.info.duration) || 0;
+    }
+
+    // 探测说「这个浏览器注定播不了」：趁用户还在等首帧，马上切转码 / 软解
+    if (plan && plan.mode === 'transcode') {
+      cancelled = true;
+      v.removeAttribute('src');
+      try { v.load(); } catch { /* ignore */ }
+      startTranscode(plan.reason, false, plan.info);
+      return;
+    }
+    if (plan && plan.mode === 'mpegts') {
+      cancelled = true;
+      // TS/FLV 交给 mpegts.js：原生 <video> 对这两种容器没戏，
+      // 早切一秒就少一秒黑屏
+      try { v.pause(); } catch { /* ignore */ }
+      v.removeAttribute('src');
+      try { v.load(); } catch { /* ignore */ }
+      useMpegts();
+      return;
+    }
+    // direct / unknown：已经在播了，探测结果只用来补显示编码信息
+  }
+
+  /* ---- TS / FLV：mpegts.js 在浏览器里软解 ---- */
+  function useMpegts() {
+    loadScript('vendor/mpegts.js').then(() => {
+      if (!window.mpegts || !mpegts.getFeatureList().mseLivePlayback) {
+        startTranscode('当前浏览器不支持 MSE 软解');
+        return;
+      }
+      const player = mpegts.createPlayer(
+        { type: FLV_EXTS.has(ext) ? 'flv' : 'mpegts', isLive: false, url: src },
+        {
+          // 开 stash buffer：软解要一边下一边喂 MSE，不留缓冲的话
+          // 每次网络抖动/磁盘寻道都会直接表现在画面上（就是用户说的「卡顿」）。
+          // cleanup 保持打开，让它自己回收已播完的 SourceBuffer，避免长片内存涨爆。
+          enableStashBuffer: true,
+          stashInitialSize: 384,
+          autoCleanupSourceBuffer: true,
+          autoCleanupMaxBackwardDuration: 30,
+          autoCleanupMinBackwardDuration: 15,
+          // 一次多拉一点数据，减少请求次数（NAS 上每次请求都要过一遍路径校验 + 磁盘寻道）
+          lazyLoad: false,
+        },
+      );
+      player.attachMediaElement(v);
+      player.load();
+      player.on(mpegts.Events.ERROR, (type, detail) => {
+        if (type === 'NetworkError') {
+          say('读取视频流失败：' + esc(detail && detail.msg ? detail.msg : '网络错误'), 'err');
+        } else if (type === 'MediaError') {
+          startTranscode('这个文件的编码浏览器软解也吃不下（常见于 H.265 / AC3 音轨）');
+        } else {
+          say('播放出错：' + esc(detail && detail.msg ? detail.msg : type), 'err');
+        }
+      });
+      v.play().catch(() => {});
+    }).catch((e) => say(esc(e.message), 'err'));
+  }
+
+  /* ---- 按钮 ---- */
+  document.getElementById('checkBtn').onclick = async () => {
+    checkOut.innerHTML = '<div class="fn-status">正在体检：让 NAS 上的 ffmpeg 真解码开头和结尾各 15 秒，最多约 1 分钟…</div>';
+    try {
+      const r = await api(`/local/check?${q({ path: playPath })}`);
+      const warn = r.warnings && r.warnings.length
+        ? `<div style="margin-top:8px;color:var(--fn-dim);font-size:12.5px">无害提示：${esc(r.warnings[0])}</div>`
+        : '';
+      checkOut.innerHTML = r.decodable
+        ? `<div class="fn-status ok">✅ <b>文件本身没问题</b>：ffmpeg 成功解码 <b>${r.frames}</b> 帧（开头 + 结尾各试了 ${r.seconds} 秒）。<br>`
+          + '播不动的原因在浏览器这一侧的<b>解码能力</b>上——所以要用 NAS 转码。'
+          + '如果转码也一直没画面，换 Chrome / Edge / 手机自带浏览器（夸克、UC 会劫持网页播放器）。'
+          + warn + '</div>'
+        : `<div class="fn-status err">⚠ ffmpeg 只解出 ${r.frames} 帧，<b>文件很可能损坏或没下载完整</b>：<br><code>`
+          + (r.errors || []).map(esc).join('<br>') + '</code><br>建议重新下载 / 重新导出这个文件。' + warn + '</div>';
+    } catch (e) {
+      checkOut.innerHTML = `<div class="fn-status err">${esc(e.message)}</div>`;
+    }
+  };
+
+  retryBtn.onclick = async () => {
+    retryBtn.hidden = true;
+    checkOut.innerHTML = '';
+    destroyHls();
+    v.removeAttribute('src');
+    try { v.load(); } catch { /* ignore */ }
+    await startTranscode('按你的要求重新转码', true);
+  };
+
+  const diagBtn = document.getElementById('diagBtn');
+  if (diagBtn) diagBtn.onclick = openDiag;
+
+  decide();
+}
+
+/* ================= 媒体库（海报墙） ================= */
+
+let libEntries = [];
+let libQuery = '';
+let libKind = 'all';
+let libSort = 'time';
+let libFfmpeg = true;
+
+function initLibrary() {
+  app.innerHTML = `
+    ${topbarHtml(`
+      <div class="fn-search"><input id="libQ" type="search" placeholder="搜索片名 / 目录…" autocomplete="off"></div>
+      <button class="fn-btn" id="viewSwitch" title="按文件夹浏览">📁<span class="txt"> 文件夹</span></button>
+      <button class="fn-btn" id="addDirBtn" title="添加视频目录">＋<span class="txt"> 目录</span></button>
+    `)}
+    ${addBoxHtml()}
+    <div id="libHint"></div>
+    <div id="lmBody"><div class="fn-loading"><div class="ring"></div>正在扫描媒体库…</div></div>`;
+
+  bindAddBox();
+  document.getElementById('diagBtn').onclick = openDiag;
+  document.getElementById('viewSwitch').onclick = () => { location.href = pageHref(rootId, '', 'browse'); };
+
+  const qi = document.getElementById('libQ');
+  let debounce;
+  qi.addEventListener('input', () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => { libQuery = qi.value.trim().toLowerCase(); renderLibrary(); }, 150);
+  });
+
+  (async () => {
+    await loadDirs();
+    document.getElementById('rootBar').innerHTML = rootsBarHtml();
+    bindRoots(document.getElementById('rootBar'));
+    loadLibrary();
+  })();
+}
+
+async function loadLibrary() {
+  const body = document.getElementById('lmBody');
+  let data;
+  try {
+    const res = await fetch(`api/local/library?${q({})}`);
+    data = await res.json();
+  } catch {
+    data = { ok: false, error: '网络错误' };
+  }
+
+  if (!data.ok) {
+    body.innerHTML = `<div class="fn-empty">${esc(data.error || '加载失败')}</div>${emptyHint()}`;
+    return;
+  }
+
+  libEntries = data.entries || [];
+  libFfmpeg = data.ffmpeg !== false;
+
+  const hint = document.getElementById('libHint');
+  if (!libFfmpeg) {
+    hint.innerHTML = `<div class="fn-note">
+      这台 NAS 上没检测到 <b>ffmpeg</b>：抽封面、转码播放都用不了（浏览器只能直接播 H.264 + AAC）。
+      点右上角 <b>「⚙ 诊断」</b>能看到具体探测结果；装上 ffmpeg 后刷新本页即可：
+      <code>sudo apt install -y ffmpeg</code>
+    </div>`;
+  } else {
+    hint.innerHTML = '';
+  }
+
+  renderLibrary();
+  if (data.truncated) toast('目录太大，只展示了前一部分');
+}
+
+function currentLibList() {
+  let list = libEntries.slice();
+  if (libKind !== 'all') list = list.filter((e) => (e.kind || 'video') === libKind);
+  if (libQuery) {
+    list = list.filter((e) =>
+      (e.title || '').toLowerCase().includes(libQuery) ||
+      (e.name || '').toLowerCase().includes(libQuery) ||
+      (e.folder || '').toLowerCase().includes(libQuery));
+  }
+  if (libSort === 'time') list.sort((a, b) => (b.mtime || 0) - (a.mtime || 0));
+  else if (libSort === 'size') list.sort((a, b) => (b.size || 0) - (a.size || 0));
+  return list;
+}
+
+function coverImgHtml(e) {
+  const extTxt = esc((e.ext || '').replace('.', '').toUpperCase() || '?');
+  const ep = episodeOf(e.name);
+  const key = window.MPCovers ? esc(window.MPCovers.coverKey(rootId, e)) : '';
+  const attrs = `alt="" loading="lazy" decoding="async" data-cover-url="${esc(fileUrl(e.path))}"`
+    + ` data-cover-key="${key}" data-server-cover="${esc(coverUrl(e.path))}"`;
+  const img = e.cover
+    ? `<img src="${fileUrl(e.cover)}" ${attrs}>`
+    : `<img class="lazy" ${attrs}>`;
+  return `<div class="fn-poster">
+      <div class="ph"><span class="ico">${e.kind === 'audio' ? '♪' : '🎬'}</span>${extTxt}</div>
+      ${img}
+      ${ep ? `<span class="ep">第 ${ep} 集</span>` : ''}
+      <span class="ext">${extTxt}</span>
+      <span class="hover"><span>▶</span></span>
+    </div>`;
+}
+
+/** 给一张海报补封面：先让 NAS 上的 ffmpeg 抽帧，拿不到再退回浏览器抓帧 */
+function fillPoster(img) {
+  const state = img.dataset.coverState;
+  if (state === 'loading' || state === 'done' || state === 'failed') return;
+  img.dataset.coverState = 'loading';
+
+  const done = () => {
+    img.dataset.coverState = 'done';
+    img.classList.add('has-cover');
+    const ph = img.parentElement && img.parentElement.querySelector('.ph');
+    if (ph) ph.style.display = 'none';
+  };
+  const viaBrowser = () => {
+    if (!window.MPCovers) { img.dataset.coverState = 'failed'; return; }
+    window.MPCovers.fillCover(img, { url: img.dataset.coverUrl, key: img.dataset.coverKey })
+      .then((hit) => { if (hit) done(); else img.dataset.coverState = 'failed'; });
+  };
+
+  const srv = img.dataset.serverCover;
+  if (!srv) { viaBrowser(); return; }
+  const probe = new Image();
+  probe.onload = () => { img.src = srv; done(); };
+  probe.onerror = viaBrowser;
+  probe.src = srv;
+}
+
+function cardHtml(e) {
+  return `<button class="fn-card" data-path="${esc(e.path)}" data-kind="${e.kind || 'video'}"
+      data-ext="${esc(e.ext || '')}" data-cover="${esc(e.cover || '')}" title="${esc(e.name)}">
+      ${coverImgHtml(e)}
+      <div class="fn-card-title">${esc(e.title || e.name)}</div>
+      <div class="fn-card-sub">${e.folder ? esc(e.folder) + ' · ' : ''}${fmtSize(e.size)}</div>
+    </button>`;
+}
+
+function heroHtml(e) {
+  const ep = episodeOf(e.name);
+  return `<section class="fn-hero" id="fnHero">
+    <div class="fn-hero-bg" id="heroBg"></div>
+    <div class="fn-hero-body">
+      <div class="fn-kicker">最近添加</div>
+      <h1>${esc(e.title || e.name)}</h1>
+      <div class="fn-hero-meta">${e.folder ? esc(e.folder) + ' · ' : ''}${esc((e.ext || '').replace('.', '').toUpperCase())} · ${fmtSize(e.size)}${ep ? ' · 第 ' + ep + ' 集' : ''}</div>
+      <div class="fn-hero-actions">
+        <button class="fn-btn primary" id="heroPlay">▶ 立即播放</button>
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderLibrary() {
+  const body = document.getElementById('lmBody');
+  const list = currentLibList();
+
+  if (list.length === 0) {
+    body.innerHTML = libEntries.length === 0
+      ? `<div class="fn-empty">这个目录里还没有可播放的媒体文件。</div>${emptyHint()}`
+      : '<div class="fn-empty">没有匹配的结果。</div>';
+    return;
+  }
+
+  const searching = !!libQuery || libKind !== 'all';
+  const folders = [...new Set(list.map((e) => e.folder || ''))];
+
+  let html = '';
+  let heroEntry = null;
+
+  if (!searching) {
+    // Hero：最近添加的一部（用它的抽帧封面做背景）
+    const byTime = list.slice().sort((a, b) => (b.mtime || 0) - (a.mtime || 0));
+    heroEntry = byTime.find((e) => (e.kind || 'video') === 'video') || byTime[0];
+    html += heroHtml(heroEntry);
+
+    const recent = byTime.filter((e) => e !== heroEntry).slice(0, 14);
+    if (recent.length >= 3) {
+      html += `<div class="fn-rows"><section class="fn-row">
+        <div class="fn-row-head"><h2>最近添加</h2><span class="count">${recent.length} 项</span></div>
+        <div class="fn-strip">${recent.map(cardHtml).join('')}</div>
+      </section></div>`;
+    }
+  }
+
+  // 按文件夹分行；只有一个文件夹（或全在根目录）时直接铺网格
+  if (folders.length <= 1) {
+    html += `<div class="fn-grid">${list.map(cardHtml).join('')}</div>`;
+  } else {
+    html += '<div class="fn-rows">';
+    for (const f of folders) {
+      const items = list.filter((e) => (e.folder || '') === f);
+      html += `<section class="fn-row">
+        <div class="fn-row-head"><h2>${esc(f || '根目录')}</h2><span class="count">${items.length} 部</span></div>
+        <div class="fn-strip">${items.map(cardHtml).join('')}</div>
+      </section>`;
+    }
+    html += '</div>';
+  }
+
+  body.innerHTML = html;
+
+  body.querySelectorAll('.fn-card').forEach((card) => { card.onclick = () => playEntry(card); });
+  if (heroEntry) {
+    const bg = document.getElementById('heroBg');
+    const probe = new Image();
+    probe.onload = () => { bg.style.backgroundImage = `url("${coverUrl(heroEntry.path)}")`; };
+    probe.src = coverUrl(heroEntry.path);
+    document.getElementById('heroPlay').onclick = () => {
+      location.href = `local.html?${new URLSearchParams({
+        ...(rootId && rootId !== 'auto' ? { root: rootId } : {}),
+        play: heroEntry.path,
+        kind: heroEntry.kind || 'video',
+        ...(heroEntry.ext ? { ext: heroEntry.ext } : {}),
+        ...(heroEntry.cover ? { cover: heroEntry.cover } : {}),
+      }).toString()}`;
+    };
+  }
+
+  // 同名封面图加载失败（文件损坏/被删）→ 回退到抽帧
+  body.querySelectorAll('img[data-cover-url]').forEach((img) => {
+    img.addEventListener('error', () => {
+      const st = img.dataset.coverState;
+      if (st === 'loading' || st === 'done' || st === 'failed') return;
+      img.classList.add('lazy');
+      img.removeAttribute('src');
+      fillPoster(img);
+    });
+  });
+
+  lazyFillCovers(body);
+  bindTrackpadUX(body);
+}
+
+/** 无封面图时，卡片进入视口才抽帧，避免一次性解码几十个视频 */
+let coverObserver = null;
+function lazyFillCovers(scope) {
+  const imgs = scope.querySelectorAll('img.lazy[data-cover-key]');
+  if (!imgs.length || !window.MPCovers) return;
+
+  if (!('IntersectionObserver' in window)) { imgs.forEach(fillPoster); return; }
+  if (coverObserver) coverObserver.disconnect();
+  coverObserver = new IntersectionObserver((entries) => {
+    for (const en of entries) {
+      if (en.isIntersecting) { fillPoster(en.target); coverObserver.unobserve(en.target); }
+    }
+  }, { rootMargin: '300px' });
+  imgs.forEach((img) => coverObserver.observe(img));
+}
+
+function playEntry(card) {
+  const p = new URLSearchParams();
+  if (rootId && rootId !== 'auto') p.set('root', rootId);
+  if (curPath) p.set('path', curPath);
+  if (view === 'browse') p.set('view', 'browse');
+  p.set('play', card.dataset.path);
+  p.set('kind', card.dataset.kind || 'video');
+  if (card.dataset.ext) p.set('ext', card.dataset.ext);
+  if (card.dataset.cover) p.set('cover', card.dataset.cover);
+  location.href = 'local.html?' + p.toString();
+}
+
+/* ================= 触摸板 / 触控板友好交互 =================
+ *
+ * 为什么需要单独处理：笔记本触摸板没有「鼠标悬停」这个概念，
+ * 传统 :hover 里的操作提示（播放按钮、卡片抬升）在触摸板上根本出不来；
+ * 而横向滚动只能靠拖滚动条，双指滑动默认是被浏览器当成「页面滚动」吞掉的。
+ * 下面几个函数就是把这几件事补齐。
+ */
+
+/**
+ * 让横向列表支持「双指左右滑 / 鼠标滚轮 / 按住拖」滚动。
+ * 触摸板双指横滑会产生 wheel 事件（deltaX 有值），这里接住它，
+ * 只在横向列表自己还能滚的时候拦截，滚到头就把事件还给页面（还能上下滚）。
+ */
+function bindHStripScroll(root) {
+  // 所有横向滚动容器都接一遍：海报条、根目录条、筛选标签条…
+  const strips = (root || app).querySelectorAll('.fn-strip, .fn-roots, .fn-tabs, [data-hscroll]');
+  strips.forEach((strip) => {
+    if (strip.dataset.wheelBound) return;
+    strip.dataset.wheelBound = '1';
+
+    strip.addEventListener('wheel', (e) => {
+      // 横向优先用 deltaX（触摸板双指横滑）；如果用户是滚鼠标中键（只有 deltaY），
+      // 在列表上就把它翻译成横向滚动，比「滚了没反应」友好得多。
+      const dx = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      const max = strip.scrollWidth - strip.clientWidth;
+      if (max <= 0) return; // 内容没超出，不拦
+      const next = strip.scrollLeft + dx;
+      // 到两头顶了就放行给页面，避免「卡在列表里」滚不动页面
+      if ((next < 0 && dx < 0) || (next > max && dx > 0)) return;
+      e.preventDefault();
+      strip.scrollLeft = next;
+    }, { passive: false });
+
+    // 按住拖动（触摸板按住 + 手指移动 = 鼠标拖拽）：比反复拨滚轮顺手
+    let down = false; let startX = 0; let startLeft = 0; let dragged = false;
+    strip.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return; // 只响应左键/触摸
+      down = true; dragged = false;
+      startX = e.clientX;
+      startLeft = strip.scrollLeft;
+    });
+    strip.addEventListener('pointermove', (e) => {
+      if (!down) return;
+      const dx = e.clientX - startX;
+      if (!dragged && Math.abs(dx) < 6) return; // 低于阈值当点击，不当拖拽
+      dragged = true;
+      strip.classList.add('dragging');
+      strip.scrollLeft = startLeft - dx;
+      // 拖拽期间别让卡片把这次手势当成点击
+      if (strip._suppressClick !== true) {
+        strip._suppressClick = true;
+      }
+    });
+    const endDragStrip = () => {
+      if (!down) return;
+      down = false;
+      strip.classList.remove('dragging');
+      // 手势结束后 80ms 内吃掉一次 click，避免「拖完顺手点开了某一集」
+      if (dragged) {
+        setTimeout(() => { strip._suppressClick = false; }, 80);
+      } else {
+        strip._suppressClick = false;
+      }
+    };
+    strip.addEventListener('pointerup', endDragStrip);
+    strip.addEventListener('pointerleave', endDragStrip);
+    strip.addEventListener('pointercancel', endDragStrip);
+    strip.addEventListener('click', (e) => {
+      if (strip._suppressClick) { e.preventDefault(); e.stopPropagation(); }
+    }, true);
+
+    // 键盘可达：焦点在列表内的卡片上时，左右方向键横向滚动
+    strip.addEventListener('keydown', (e) => {
+      const step = strip.clientWidth * 0.8;
+      if (e.key === 'ArrowRight') { e.preventDefault(); strip.scrollBy({ left: step, behavior: 'smooth' }); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); strip.scrollBy({ left: -step, behavior: 'smooth' }); }
+    });
+
+    // 触摸板没有 hover，用「指针进入过」的标记来让卡片显示操作层
+    strip.addEventListener('pointerenter', () => strip.classList.add('show-acts'));
+    strip.addEventListener('pointerleave', () => strip.classList.remove('show-acts'));
+  });
+}
+
+/**
+ * 触摸板点击容易「带一点位移」，会被浏览器判成拖拽而丢失 click。
+ * 这里在卡片上做小位移兜底：位移 < 8px 就补发一次点击。
+ * 同时支持键盘 Enter/Space（卡片是 <a>，本来就有，这里只补 button 类卡片）。
+ */
+function bindCardPrecision(root) {
+  (root || app).querySelectorAll('.fn-card').forEach((card) => {
+    if (card.dataset.precBound) return;
+    card.dataset.precBound = '1';
+
+    let downX = 0; let downY = 0; let moved = false;
+    card.addEventListener('pointerdown', (e) => { downX = e.clientX; downY = e.clientY; moved = false; });
+    card.addEventListener('pointermove', (e) => {
+      if (Math.abs(e.clientX - downX) > 8 || Math.abs(e.clientY - downY) > 8) moved = true;
+    });
+    card.addEventListener('pointerup', (e) => {
+      if (moved) return;
+      // 触摸板轻点后如果浏览器没派发 click（被判成拖拽），这里补一次
+      if (e.pointerType !== 'mouse' && card.tagName === 'BUTTON') card.click();
+    });
+
+    // 键盘可达性：Tab 到卡片时高亮（:focus-visible 处理样式，这里补 Enter 打开）
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        card.click();
+      }
+    });
+  });
+}
+
+/** 统一刷新所有触摸板相关绑定（每次重新渲染列表后调用） */
+function bindTrackpadUX(root) {
+  bindHStripScroll(root);
+  bindCardPrecision(root);
+}
+
+/* ================= 文件夹浏览 ================= */
+
+async function initBrowser() {
+  app.innerHTML = `
+    ${topbarHtml(`<button class="fn-btn" id="viewSwitch" title="切回海报墙">🖼<span class="txt"> 海报墙</span></button>`)}
+    ${addBoxHtml()}
+    <div id="lmBody"><div class="fn-loading"><div class="ring"></div>正在加载…</div></div>`;
+
+  await loadDirs();
+  document.getElementById('rootBar').innerHTML = rootsBarHtml();
+  bindRoots(document.getElementById('rootBar'));
+  bindAddBox();
+  document.getElementById('diagBtn').onclick = openDiag;
+  document.getElementById('viewSwitch').onclick = () => { location.href = pageHref(rootId, '', 'library'); };
+  loadDir(curPath);
+}
+
+async function loadDir(path) {
+  const body = document.getElementById('lmBody');
+  if (!body) return;
+  body.innerHTML = '<div class="fn-loading"><div class="ring"></div>正在加载…</div>';
+
+  let data;
+  try {
+    const res = await fetch(`api/local?${q({ path: path || undefined })}`);
+    data = await res.json();
+  } catch {
+    data = { ok: false, error: '网络错误' };
+  }
+
+  if (!data.ok) {
+    body.innerHTML = `<div class="fn-empty">${esc(data.error || '加载失败')}</div>${emptyHint()}`;
+    return;
+  }
+
+  const parts = path ? path.split('/') : [];
+  let crumb = `<a href="${pageHref(rootId, '', 'browse')}" style="color:var(--fn-accent-2);text-decoration:none">根目录</a>`;
+  let acc = '';
+  for (const p of parts) {
+    acc = acc ? `${acc}/${p}` : p;
+    crumb += ` <span style="opacity:.4">/</span> <a href="${pageHref(rootId, acc, 'browse')}" style="color:var(--fn-accent-2);text-decoration:none">${esc(p)}</a>`;
+  }
+
+  const items = data.entries.map((e) => {
+    if (e.dir) {
+      return `<button class="fn-card" data-go="${esc(e.path)}">
+        <div class="fn-poster"><div class="ph"><span class="ico">📁</span>文件夹</div></div>
+        <div class="fn-card-title">${esc(e.name)}</div>
+        <div class="fn-card-sub">文件夹</div>
+      </button>`;
+    }
+    const ep = episodeOf(e.name);
+    const extTxt = esc((e.ext || '').replace('.', '').toUpperCase());
+    const img = e.cover
+      ? `<img src="${fileUrl(e.cover)}" alt="" loading="lazy">`
+      : `<img class="lazy" alt="" data-cover-url="${esc(fileUrl(e.path))}"
+          data-cover-key="${window.MPCovers ? esc(window.MPCovers.coverKey(rootId, e)) : ''}"
+          data-server-cover="${esc(coverUrl(e.path))}">`;
+    const warn = UNDECODABLE.has(extOf(e.path)) ? ' · 需转码' : '';
+    return `<button class="fn-card" data-play="${esc(e.path)}" data-kind="${e.kind || 'video'}"
+        data-ext="${esc(e.ext || '')}" data-cover="${esc(e.cover || '')}" title="${esc(e.name)}">
+      <div class="fn-poster">
+        <div class="ph"><span class="ico">${e.kind === 'audio' ? '♪' : '🎬'}</span>${extTxt}</div>
+        ${img}
+        ${ep ? `<span class="ep">第 ${ep} 集</span>` : ''}
+        <span class="ext">${extTxt}</span>
+        <span class="hover"><span>▶</span></span>
+      </div>
+      <div class="fn-card-title">${esc(e.name)}</div>
+      <div class="fn-card-sub">${fmtSize(e.size)}${warn}</div>
+    </button>`;
+  }).join('');
+
+  body.innerHTML = `
+    <div style="padding:16px 24px 4px;color:var(--fn-dim);font-size:13px">
+      视频目录：<code style="color:#cfe0ff">${esc(data.root || '')}</code>
+    </div>
+    <div style="padding:2px 24px 12px;font-size:13px">${crumb}</div>
+    ${items ? `<div class="fn-grid">${items}</div>` : '<div class="fn-empty">这个目录里还没有媒体文件。</div>'}`;
+
+  body.querySelectorAll('[data-go]').forEach((el) => {
+    el.onclick = () => { location.href = pageHref(rootId, el.dataset.go, 'browse'); };
+  });
+  body.querySelectorAll('[data-play]').forEach((el) => {
+    el.onclick = () => {
+      const p = new URLSearchParams();
+      if (rootId && rootId !== 'auto') p.set('root', rootId);
+      if (curPath) p.set('path', curPath);
+      p.set('view', 'browse');
+      p.set('play', el.dataset.play);
+      p.set('kind', el.dataset.kind || 'video');
+      if (el.dataset.ext) p.set('ext', el.dataset.ext);
+      if (el.dataset.cover) p.set('cover', el.dataset.cover);
+      location.href = 'local.html?' + p.toString();
+    };
+  });
+
+  browseFillCovers(body);
+  bindTrackpadUX(body);
+}
+
+/** 文件夹视图：给没有封面图的海报位补一帧（串行，别把 NAS 一下打满） */
+async function browseFillCovers(scope) {
+  const imgs = [...scope.querySelectorAll('img.lazy[data-server-cover]')];
+  for (const img of imgs) {
+    const ph = img.parentElement && img.parentElement.querySelector('.ph');
+    const show = () => { img.style.display = 'block'; if (ph) ph.style.display = 'none'; };
+    const viaBrowser = () => {
+      if (!window.MPCovers) return Promise.resolve(false);
+      return window.MPCovers.fillCover(img, { url: img.dataset.coverUrl, key: img.dataset.coverKey })
+        .then((ok) => { if (ok) show(); return ok; });
+    };
+    const srv = img.dataset.serverCover;
+    let ok = false;
+    if (srv) {
+      ok = await new Promise((res) => {
+        const probe = new Image();
+        probe.onload = () => { img.src = srv; show(); res(true); };
+        probe.onerror = () => res(false);
+        probe.src = srv;
+      });
+    }
+    if (!ok) await viaBrowser();
+  }
+}
+</script>
+</body>
+</html>

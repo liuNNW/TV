@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>设置 - 影视播放站</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<style>
+  .set-card { background: var(--card-bg, #fff); border: 1px solid #e5e5e5; border-radius: 10px; padding: 18px; margin-bottom: 16px; max-width: 860px; }
+  .set-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 10px 0; }
+  .set-row input { flex: 1; min-width: 260px; }
+  .set-card h3 { margin: 0 0 6px; }
+  .set-log { display: none; background: #111; color: #cde3c8; font: 12px/1.7 Consolas, monospace; padding: 12px 14px; border-radius: 8px; max-height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-all; }
+  .set-log.show { display: block; }
+  .ver-line { color: #666; font-size: 13px; line-height: 1.9; }
+  .ver-sub { color: #888; font-size: 12px; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; background: #eef4ee; color: #2e7d32; }
+  .pill.warn { background: #fdf3e7; color: #b26a00; }
+  .set-commits { display: none; margin: 4px 0 10px; padding: 10px 12px; background: #f7f8f9; border-radius: 8px; font-size: 13px; line-height: 1.8; }
+  .set-commits.show { display: block; }
+  .set-commits .c-hash { font-family: Consolas, monospace; color: #2e7d32; margin-right: 8px; }
+  .set-commits .c-more { color: #888; font-size: 12px; }
+</style>
+</head>
+<body>
+<main class="wrap" id="app">
+  <h2>设置</h2>
+
+  <div class="set-card" id="verCard">
+    <h3>版本与一键更新</h3>
+    <div class="ver-line" id="verInfo">正在加载…</div>
+    <div class="ver-line" id="runtimeInfo"></div>
+    <div class="set-row">
+      <input id="repoUrl" placeholder="GitHub 仓库地址，如 https://github.com/用户名/movie-player.git" autocomplete="off">
+      <input id="branch" placeholder="分支（默认 main）" style="flex:0 0 140px" autocomplete="off">
+    </div>
+    <div class="set-row">
+      <input id="repoToken" type="password" placeholder="GitHub Token（私有仓库必填）" autocomplete="off">
+      <button class="btn" id="clearTokenBtn">清除 Token</button>
+    </div>
+    <div class="set-row">
+      <button class="primary" id="bindBtn">🔗 绑定仓库（首次）</button>
+      <button class="btn" id="checkBtn">🔍 检查更新</button>
+      <button class="btn" id="runBtn">⬇ 一键更新并重启</button>
+      <span class="ver-line" id="checkInfo"></span>
+    </div>
+    <div class="set-commits" id="commits"></div>
+    <div class="set-log" id="log"></div>
+    <div class="err" id="msg" style="display:none"></div>
+  </div>
+
+  <div class="set-card">
+    <h3>怎么用</h3>
+    <div class="ver-line">
+      ① 电脑上把项目推到 GitHub / Gitee 仓库（含 <code>dist/</code>，服务器不用装 TypeScript），
+      改完代码执行 <code>npm run ship "更新说明"</code> 一条命令构建+提交+推送。<br>
+      ② 填仓库地址和分支点「绑定仓库」；<b>私有仓库还要填 GitHub Token</b>。
+      Token 只存在服务器的 <code>data/update-config.json</code>，不会回显到页面，也不会进仓库。<br>
+      ③ 以后推完代码，打开本页会自动检查是否有新提交；点「一键更新并重启」完成
+      拉取 → 覆盖 → 装依赖 → 重启，页面会自动刷新。<br>
+      ④ 用 PM2 托管时，更新重启由 PM2 负责（不会出现两个进程抢端口）。
+      没装 PM2 则使用原来的自愈重启。<br>
+      ⑤ 公网暴露时请设置环境变量 <code>UPDATE_TOKEN</code>，并用
+      <code>settings.html?token=你的口令</code> 打开本页；页面会自动把口令带给更新接口。<br>
+      <b>收藏 / 历史 / 本地媒体配置 / videos 文件夹都不在仓库里，更新不会覆盖。</b>
+    </div>
+  </div>
+</main>
+
+<script src="app.js"></script>
+<script src="player-ui.js"></script>
+<script>
+mountTopbar('settings.html');
+
+const $ = (id) => document.getElementById(id);
+const msg = $('msg');
+function showErr(t) { msg.textContent = t ? '✗ ' + t : ''; msg.style.display = t ? 'block' : 'none'; }
+function fmtAt(ts) { return ts ? new Date(ts).toLocaleString('zh-CN') : '—'; }
+
+/* ---------------- 运行环境 ---------------- */
+function renderRuntime(rt) {
+  if (!rt) return;
+  $('runtimeInfo').innerHTML = rt.pm2
+    ? `运行方式：<span class="pill">PM2 托管</span> 应用 <code>${esc(rt.appName)}</code> · 进程 ${esc(String(rt.pmId))} · PID ${esc(String(rt.pid))}`
+    : `运行方式：<span class="pill warn">非 PM2 进程</span> 建议执行 <code>bash scripts/pm2-deploy.sh</code> 托管`;
+}
+
+/* ---------------- 更新进度 ---------------- */
+let pollTimer = null;
+let restartExpected = false;
+
+function showLog(job) {
+  const el = $('log');
+  el.classList.add('show');
+  el.textContent = (job.log || []).join('\n');
+  el.scrollTop = el.scrollHeight;
+}
+
+function stopPoll() {
+  clearInterval(pollTimer);
+  pollTimer = null;
+}
+
+/** 等服务重启回来 */
+async function waitHealthy(maxSec) {
+  for (let i = 0; i < maxSec * 2; i++) {
+    try {
+      const r = await fetch('api/health', { cache: 'no-store' });
+      if (r.ok) return true;
+    } catch { /* 没回来就再等 */ }
+    await new Promise((s) => setTimeout(s, 500));
+  }
+  return false;
+}
+
+async function afterHealthy() {
+  toast('服务重启中…');
+  const ok = await waitHealthy(90);
+  if (ok) {
+    toast('✅ 新版本已上线，正在刷新');
+    setTimeout(() => location.reload(), 800);
+  } else {
+    showErr('服务未在预期时间内恢复。请 SSH 执行：pm2 logs movie-player');
+  }
+}
+
+function pollStatus() {
+  stopPoll();
+  pollTimer = setInterval(async () => {
+    let r;
+    try {
+      r = await api('/update/status');
+    } catch {
+      // 更新过程中进程会退出重启，接口短暂不通属正常；
+      // 只要之前看到过任务在跑，就等服务回来再刷新。
+      if (restartExpected) {
+        stopPoll();
+        afterHealthy();
+      }
+      return;
+    }
+
+    if (r.runtime) renderRuntime(r.runtime);
+    const job = r.job || {};
+    if (job.log && job.log.length) showLog(job);
+    if (job.running) return;
+
+    stopPoll();
+    if (job.error) {
+      showErr(job.error.split('\n').slice(-6).join('\n'));
+      toast('更新失败');
+      return;
+    }
+    if (job.restarting || restartExpected) {
+      afterHealthy();
+      return;
+    }
+  }, 1000);
+}
+
+/* ---------------- 检查更新 ---------------- */
+function hideCommits() {
+  $('commits').classList.remove('show');
+  $('commits').innerHTML = '';
+}
+
+function showCommits(list) {
+  if (!list || !list.length) { hideCommits(); return; }
+  const shown = list.slice(0, 5);
+  const rows = shown
+    .map((c) => `<div><span class="c-hash">${esc(c.hash)}</span>${esc(c.subject)}</div>`)
+    .join('');
+  const more = list.length > shown.length
+    ? `<div class="c-more">还有 ${list.length - shown.length} 条提交…</div>`
+    : '';
+  $('commits').innerHTML = `<b>待更新提交</b>${rows}${more}`;
+  $('commits').classList.add('show');
+}
+
+async function checkForUpdates(auto) {
+  if (!auto) {
+    showErr('');
+    $('checkInfo').textContent = '检查中…';
+  } else {
+    $('checkInfo').textContent = '正在自动检查…';
+  }
+  try {
+    const r = await api('/update/check', { method: 'POST' });
+    if (!r.bound) {
+      $('checkInfo').textContent = '尚未绑定仓库';
+      hideCommits();
+      return;
+    }
+    if (r.behind > 0) {
+      $('checkInfo').innerHTML = `<span class="pill warn">落后 ${r.behind} 个提交，可更新</span> 最新：${esc(r.remoteMsg || '')}`;
+      showCommits(r.commits || []);
+    } else {
+      $('checkInfo').innerHTML = `<span class="pill">已是最新</span> <span class="ver-sub">${esc(r.local || '')}</span>`;
+      hideCommits();
+    }
+  } catch (e) {
+    $('checkInfo').textContent = '';
+    if (auto) $('checkInfo').textContent = '自动检查失败：' + e.message;
+    else showErr(e.message);
+  }
+}
+
+/* ---------------- 表单 ---------------- */
+function readForm() {
+  const repoUrl = $('repoUrl').value.trim();
+  const branch = $('branch').value.trim() || 'main';
+  const token = $('repoToken').value.trim();
+  // 留空表示保留已保存的 Token，不要发空字符串把它清掉
+  return token ? { repoUrl, branch, token } : { repoUrl, branch };
+}
+
+function jsonOpts(body) {
+  return { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+}
+
+async function saveForm(extra) {
+  await api('/update/config', jsonOpts({ ...readForm(), ...(extra || {}) }));
+}
+
+/* ---------------- 动作 ---------------- */
+$('bindBtn').onclick = async () => {
+  const f = readForm();
+  if (!f.repoUrl) { showErr('请先填写仓库地址'); return; }
+  if (!confirm('绑定并拉取仓库？\n\n代码文件会被仓库版本覆盖（收藏/历史/本地媒体配置/videos 不受影响）。')) return;
+  showErr('');
+  toast('正在绑定…');
+  try {
+    await api('/update/init', jsonOpts(f));
+    toast('绑定成功');
+    pollStatus();
+    loadInfo();
+  } catch (e) {
+    showErr(e.message);
+    pollStatus();
+  }
+};
+
+$('checkBtn').onclick = async () => {
+  showErr('');
+  try {
+    // 先保存表单，保证检查用的是当前填写的地址/Token
+    await saveForm();
+    await loadConfigOnly();
+  } catch (e) {
+    showErr(e.message);
+    return;
+  }
+  await checkForUpdates(false);
+};
+
+$('runBtn').onclick = async () => {
+  if (!confirm('开始一键更新？\n\n会覆盖服务器上被 Git 跟踪的代码文件，data/ 收藏与历史不受影响。更新完自动重启并刷新页面。')) return;
+  showErr('');
+  try {
+    await saveForm();
+    await api('/update/run', { method: 'POST' });
+    restartExpected = true;
+    toast('更新任务已开始…');
+    pollStatus();
+  } catch (e) {
+    showErr(e.message);
+  }
+};
+
+$('clearTokenBtn').onclick = async () => {
+  if (!confirm('清除已保存的 GitHub Token？清除后私有仓库将无法拉取。')) return;
+  const f = readForm();
+  if (!f.repoUrl) { showErr('请先填写仓库地址'); return; }
+  try {
+    await saveForm({ token: '' });
+    $('repoToken').value = '';
+    $('repoToken').placeholder = 'GitHub Token（私有仓库必填）';
+    toast('Token 已清除');
+  } catch (e) {
+    showErr(e.message);
+  }
+};
+
+/* ---------------- 初始信息 ---------------- */
+async function loadConfigOnly() {
+  const r = await api('/update/config');
+  $('repoUrl').value = r.config.repoUrl || '';
+  $('branch').value = r.config.branch || 'main';
+  $('repoToken').value = '';
+  $('repoToken').placeholder = r.config.hasToken
+    ? '已保存 Token（留空保持不变）'
+    : 'GitHub Token（私有仓库必填）';
+  renderRuntime(r.runtime);
+  return r;
+}
+
+async function loadInfo() {
+  try {
+    const r = await loadConfigOnly();
+    const s = r.state || {};
+    $('verInfo').innerHTML = s.subject
+      ? `当前版本：<b>${esc(s.subject)}</b>（${fmtAt(s.at)}）`
+      : '尚未绑定仓库。填好上面的仓库地址后点「绑定仓库」。';
+    if (r.config.repoUrl) await checkForUpdates(true);
+  } catch (e) {
+    $('verInfo').textContent = '加载失败：' + e.message;
+  }
+}
+loadInfo();
+</script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+{
+  "name": "movie-player",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "个人自用影视播放站：macCMS 采集站聚合 + HLS 网页播放（支持 NAS 部署，前后端一体）",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
+    "start:dev": "tsx src/server.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "fetch-hls": "node scripts/fetch-hls.js",
+    "ship": "node scripts/ship.mjs",
+    "pm2:start": "pm2 startOrReload ecosystem.config.cjs --update-env",
+    "pm2:reload": "pm2 reload ecosystem.config.cjs --update-env",
+    "pm2:logs": "pm2 logs movie-player",
+    "deploy:pm2": "bash scripts/pm2-deploy.sh",
+    "update:pm2": "bash scripts/pm2-deploy.sh --update"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  },
+  "optionalDependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.2",
+    "hls.js": "^1.5.20",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

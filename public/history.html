@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>观看历史 - 影视播放站</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="wrap">
+  <div class="section-title">
+    <h2>观看历史</h2>
+    <button onclick="clearAll()">清空历史</button>
+  </div>
+  <div id="content"><div class="state"><span class="spinner"></span> 加载中…</div></div>
+</main>
+
+<script src="app.js"></script>
+<script>
+mountTopbar('history.html');
+
+async function load() {
+  const box = document.getElementById('content');
+  try {
+    const r = await api('/history');
+    if (!r.items.length) {
+      box.innerHTML = '<div class="state"><div class="big">🕒</div>还没有观看记录</div>';
+      return;
+    }
+
+    // 历史卡片带进度条，所以单独渲染，不复用 renderCard
+    box.innerHTML = `<div class="grid">${r.items.map((h) => {
+      const pct = h.duration > 0 ? Math.min(100, (h.position / h.duration) * 100) : 0;
+      const item = { id: h.id, name: h.name, source: h.source, pic: h.pic };
+      const poster = h.pic
+        ? `<img class="poster" ${imgAttrs(h.pic)} alt="" loading="lazy">`
+        : `<div class="poster-ph">${esc(h.name)}</div>`;
+
+      const onClick = `location.href='${playHref(item, h.lineIndex, h.episodeIndex)}'`;
+      const sub = [h.episodeName || `第${h.episodeIndex + 1}集`, fmtTime(h.position)].filter(Boolean).join(' · ');
+      const bar = pct > 0
+        ? `<span class="prog" style="margin-top:6px"><i style="width:${pct.toFixed(1)}%"></i></span>`
+        : '';
+
+      return `<div class="card" onclick="${onClick}">
+        ${poster}
+        <div class="meta">
+          <div class="title" title="${esc(h.name)}">${esc(h.name)}</div>
+          <div class="sub">${esc(sub)}</div>
+          ${bar}
+        </div>
+      </div>`;
+    }).join('')}</div>`;
+  } catch (e) {
+    box.innerHTML = `<div class="state">${esc(e.message)}</div>`;
+  }
+}
+
+async function clearAll() {
+  if (!confirm('确定清空全部观看历史？')) return;
+  try {
+    await api('/history', { method: 'DELETE' });
+    toast('已清空');
+    load();
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+load();
+</script>
+</body>
+</html>

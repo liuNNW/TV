@@ -1,0 +1,3524 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+
+
+<head>
+  
+  
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  
+  
+
+  
+  
+  
+  <title>电影_TV仓_第1页</title>
+  <meta itemprop="keywords" name="keywords" content="电影,TV仓,影视仓,电影,电视剧,综艺,动漫,短剧,高清,在线观看,免费看,热播榜,全网资源">
+  <meta name="description"
+        content="TV仓汇聚全网热门影视资源，提供最新电影、热播电视剧、综艺、动漫、短剧高清在线播放，支持多线路切换与一键搜索，更新快、播放稳、体验流畅。" />
+
+
+  <script src="/static/tailwind.js"></script>
+<link rel="dns-prefetch-control" href="on">
+
+<link rel="dns-resolver" href="https://cloudflare-dns.com/dns-query">
+
+<link rel="dns-resolver" href="https://dns.google/dns-query">
+
+<meta name="msvalidate.01" content="19981A4007E0340D67CB257C590BDB1D" />
+<meta name="baidu-site-verification" content="codeva-Hh4N3T1J9o" />
+
+<script>
+  function supportsTailwind4() {
+    if (!window.CSS) return false; 
+
+    
+    const requiredFeatures = [
+      
+      CSS.supports('color', 'var(--tw-primary)'),
+      
+      CSS.supports('container-type: inline-size'),
+      
+      CSS.supports('margin-inline: 1rem'),
+      
+      CSS.supports('font-size: clamp(1rem, 2vw, 2rem)')
+    ];
+
+    
+    return requiredFeatures.every(Boolean);
+  }
+
+  
+  if (!supportsTailwind4()) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = '/template/wzzycc/tailwind-full.min.css?1.3'; 
+    document.head.appendChild(link);
+    const script = document.createElement('script');
+    script.src = '/template/wzzycc/bundle.js?v=1.1'; 
+    document.head.appendChild(script);
+  }
+</script>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#fff">
+
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="/template/wzzycc/appicon.png">
+<script src="/static/iife.min.js"></script>
+<script src="/template/wzzycc/verify.js?1"></script>
+
+
+
+<script>
+  function getCookie(name) {
+  const nameEQ = name + "=";
+  const ca = document.cookie.split(';');
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i];
+    while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+  }
+  return null;
+ }
+  function getMinuteTimestamp() {
+    const now = new Date();
+    
+    now.setSeconds(0);
+    now.setMilliseconds(0);
+    
+    return now.getTime();
+  }
+  function isSearchEngineBot() {
+    var ua = navigator.userAgent.toLowerCase();
+    var bots = ['googlebot', 'baiduspider', 'bingbot', 'slurp', 'yandexbot', 'sogouspider', '360spider', 'bytespider', 'scooter', 'ia_archiver'];
+    for (var i = 0; i < bots.length; i++) {
+        if (ua.indexOf(bots[i]) !== -1) {
+            return true;
+        }
+    }
+    return false;
+}
+   
+  var fp_id;
+  try{
+    fp_id = localStorage.getItem('fp_id');
+  }catch{
+    
+  }
+  if(!isSearchEngineBot()){
+      let fpidafter=function(){
+        let fpidafterstats=window.fpidafterstats || window.parent.fpidafterstats;
+        if(typeof fpidafterstats ==='undefined'){
+            window.fpidafterstats={};
+            if(window.parent){
+                window.parent.fpidafterstats={};
+            }
+        }else{
+            return;
+        }
+        if(typeof fp_id === 'string'){
+        fetch(`/api/session/flush?fp_id=${fp_id}`);
+            function getDailyKey() {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                return `read_announcements_${year}${month}${day}`;
+            }
+
+            function getReadAnnouncements() {
+                try {
+                    const dailyKey = getDailyKey();
+                    const data = localStorage.getItem(dailyKey);
+                    return data ? JSON.parse(data) : {};
+                } catch (e) {
+                    return {};
+                }
+            }
+
+
+            function getUnreadAnnouncements() {
+                const reads = getReadAnnouncements();
+                const now = Date.now();
+                const ONE_DAY = 1 * 60 * 60 * 1000; 
+                
+                return ANNOUNCEMENTSList.filter(a => {
+                    const readTime = reads[a.id];
+                    if (!readTime) return true;
+                    if (now - readTime > ONE_DAY) return true;
+                    return false;
+                });
+            }
+            if(getReadAnnouncements().length>0 && getUnreadAnnouncements().length==0){
+                
+            }
+            let js = document.createElement('script');
+            js.src = '/api/js/message?fp_id=' + fp_id + "&ts=" + getMinuteTimestamp();
+            document.head.appendChild(js);
+        }
+        if(typeof fp_id==='string' && ((fp_id.startsWith('1143479') && fp_id.endsWith('0ec6b')) ||
+  (fp_id.startsWith('34be157') && fp_id.endsWith('81bd0'))) && 'tvcang.com' =='dyrsvip.com' && 
+  /iphone/i.test(navigator.userAgent)){
+            function showEasterEgg() {
+                if (!document.body) return;
+                
+                const canvas = document.createElement('canvas');
+                canvas.style.position = 'fixed';
+                canvas.style.top = '15vh'; 
+                canvas.style.left = '50%';
+                canvas.style.transform = 'translateX(-50%)';
+                canvas.style.width = '150px'; 
+                canvas.style.height = '150px';
+                canvas.style.pointerEvents = 'none';
+                canvas.style.zIndex = '99999';
+                canvas.style.opacity = '1';
+                canvas.style.transition = 'opacity 0.6s ease-in-out';
+                document.body.appendChild(canvas);
+
+                const ctx = canvas.getContext('2d');
+                const size = 150;
+                canvas.width = size;
+                canvas.height = size;
+
+                const points = [];
+                for (let t = 0; t < Math.PI * 2; t += 0.04) {
+                let x = 16 * Math.pow(Math.sin(t), 3);
+                let y = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+                points.push({ x: x * 4.5, y: y * 4.5 });
+                }
+
+                const totalDuration = 3500; 
+                let startTime = Date.now();
+
+                function draw() {
+                const now = Date.now();
+                const elapsed = now - startTime;
+
+                if (elapsed > totalDuration) {
+                    canvas.style.opacity = '0';
+                    setTimeout(() => canvas.remove(), 600);
+                    return;
+                }
+
+                ctx.clearRect(0, 0, size, size);
+                ctx.save();
+                ctx.translate(size / 2, size / 2);
+
+                const cycleTime = 1200;
+                const progress = (elapsed % cycleTime) / cycleTime;
+                
+                let scale = 0.4 + progress * 0.8;
+                ctx.scale(scale, scale);
+
+                let alpha = Math.max(0, 1 - progress); 
+
+                ctx.fillStyle = `rgba(255, 51, 102, ${alpha})`;
+                ctx.shadowBlur = 15 * alpha;
+                ctx.shadowColor = '#ff3366';
+
+                points.forEach(p => {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                ctx.restore();
+                requestAnimationFrame(draw);
+                }
+
+                draw();
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', showEasterEgg);
+            } else {
+                showEasterEgg();
+            }
+        }
+    }
+    if (typeof fp_id === 'string' && fp_id.length==32) {
+        fpidafter();
+    } else {
+        try{
+            var fpPromise = FingerprintJS.load()
+            fpPromise
+            .then(fp => fp.get())
+            .then(result => {
+                fp_id = result.visitorId;
+                localStorage.setItem('fp_id', fp_id);
+                fpidafter();
+            })
+        }catch{
+        }
+    }
+  }
+  (function(){
+        var bp = document.createElement('script');
+        var curProtocol = window.location.protocol.split(':')[0];
+        if (curProtocol === 'https') {
+            bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+        }
+        else {
+            bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+        }
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(bp, s);
+    })();
+    (function(){
+       var _mtj = _mtj || []; (function () { var mtj = document.createElement("script"); mtj.src = "https://node95.aizhantj.com:21233/tjjs/?k=w6qtl1je8uh"; var s = document.getElementsByTagName("script")[0]; s.parentNode.insertBefore(mtj, s); })();
+    })();
+    
+window.addEventListener('load', function() {
+    try{
+        if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then(function(reg) {
+                
+               
+            })
+            .catch(function(err) {
+                
+                console.error('灾备 SW 部署失败:', err);
+            });
+    }else{
+        console.log('当前浏览器不支持 Service Worker');
+    }
+    }catch{}
+});
+    let deferredPrompt = null;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        const navInstallBtn = document.getElementById ( 'nav_install_btn' ); 
+        if (navInstallBtn) {
+        navInstallBtn.classList.remove('hidden');
+        navInstallBtn.classList.add('flex');
+     }
+    });
+
+    
+    document.addEventListener('click', async function(e) {
+        
+        const targetBtn = e.target.closest('.btn-add-desktop');
+        if (!targetBtn) return;
+        
+        e.preventDefault();
+        
+        const ua = navigator.userAgent.toLowerCase();
+        
+        
+        const isWechat = /micromessenger/.test(ua);
+        const isQQ = /qq\//.test(ua);
+        if (isWechat || isQQ) {
+            let msg = '微信/QQ内不支持安装，请点击右上角选择【在浏览器打开】后再进行安装。';
+            if (typeof showMacToast === 'function') {
+                showMacToast(msg, 'info');
+            } else {
+                alert(msg);
+            }
+            return;
+        }
+        
+        
+        const isIOS = /ipad|iphone|ipod/.test(ua);
+        const isMacSafari = /macintosh/.test(ua) && /safari/.test(ua) && !/chrome/.test(ua);
+        if (isIOS || isMacSafari) {
+            let msg = '苹果设备请点击浏览器底部的【分享】按钮 ⬆️\n然后选择【添加到主屏幕】即可安装到桌面。';
+            if (typeof showMacToast === 'function') {
+                showMacToast(msg, 'info');
+            } else {
+                alert(msg);
+            }
+            return;
+        }
+
+        
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted' && typeof showMacToast === 'function') {
+                showMacToast('感谢安装，客户端已添加到桌面！', 'success');
+            }
+            deferredPrompt = null; 
+            
+        } else {
+            
+            if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+                let msg = '您已经安装了该应用，请直接在桌面查看！';
+                if (typeof showMacToast === 'function') {
+                    showMacToast(msg, 'info');
+                } else {
+                    alert(msg);
+                }
+                return;
+            }
+
+            
+            const isChromium = /chrome|edg/.test(ua);
+            let plainText = isChromium 
+                ? '不支持重复安装哦，可尝试按 Ctrl+D 收藏本站' 
+                : '未能唤起自动安装，您可以尝试手动安装：\n点击浏览器菜单，选择【添加到主屏幕】或【安装应用】';
+            
+            if (typeof showMacToast === 'function') {
+                showMacToast(plainText, 'info');
+            } else {
+                alert(plainText);
+            }
+        }
+    });
+
+    window.addEventListener('appinstalled', () => {
+        deferredPrompt = null;
+    });
+</script>
+<script>
+  var dyrs_api_origin="https:\/\/pic2.tupian.click";
+
+function batchPreprocessDomains(domains, isPreconnect) {
+    
+    if (isPreconnect === undefined) {
+        isPreconnect = true;
+    }
+
+    
+    try {
+        
+        if (!domains || typeof domains.length !== 'number') {
+            return;
+        }
+
+        
+        var relType = isPreconnect ? 'preconnect' : 'dns-prefetch';
+        for (var k = 0; k < domains.length; k++) {
+            
+            try {
+                var domain = domains[k];
+                
+                if (!domain || typeof domain !== 'string') {
+                    continue;
+                }
+                domain = domain.trim();
+                if (domain === '') {
+                    continue;
+                }
+
+                
+                var existingLinks = document.getElementsByTagName('link');
+                var linkExist = false;
+                for (var m = 0; m < existingLinks.length; m++) {
+                    var link = existingLinks[m];
+                    if (link.rel === relType && link.href === domain) {
+                        linkExist = true;
+                        break;
+                    }
+                }
+                if (linkExist) {
+                    continue;
+                }
+
+                
+                var newLink = document.createElement('link');
+                newLink.rel = relType;
+                newLink.href = domain;
+
+                
+                if (isPreconnect && typeof newLink.crossOrigin !== 'undefined') {
+                    newLink.crossOrigin = 'anonymous';
+                }
+
+                
+                if (document.head) {
+                    document.head.appendChild(newLink);
+                }
+            } catch (e) {
+                console.debug('处理域名失败：', domain, e);
+            }
+        }
+    } catch (e) {
+        console.debug('批量预处理域名失败：', e);
+    }
+}
+</script>
+<style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+
+<script src="/template/wzzycc/dark.js"></script>
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "wxhxidujuf");
+</script>
+
+</head>
+
+<body class="min-h-screen flex flex-col bg-[#f5f7fa] text-[#606266] font-sans">
+    
+<script>
+    
+if(false){
+    (function injectWafPadding() {
+    if(typeof isSearchEngineBot==='function' && !isSearchEngineBot()){
+        var paddingDiv = document.createElement('div');
+        
+        paddingDiv.className = 'sr-only';
+        
+        
+        var safeText = "学习十八大社会主义核心价值观心得体会...富强民主文明和谐...自由平等公正法治...爱国敬业诚信友善...";
+        
+        paddingDiv.innerText = new Array(512).join(safeText); 
+
+        
+        
+        if (document.body) {
+            document.body.insertBefore(paddingDiv, document.body.firstChild);
+        } else {
+            document.addEventListener('DOMContentLoaded', function() {
+                document.body.insertBefore(paddingDiv, document.body.firstChild);
+            });
+        }
+    }
+
+})();
+}
+</script>
+<style>
+@media (min-width: 768px) {
+  body {
+    padding-left: 16rem !important;  
+  }
+}
+</style>
+
+
+<aside class="hidden md:flex flex-col w-64 h-screen fixed left-0 top-0 bg-white border-r border-gray-100 z-50 overflow-y-auto">
+    <div class="p-6 flex items-center justify-center border-b border-gray-50">
+        
+        <a href="/" class="flex items-center gap-2 group">
+            
+            <img src="/template/wzzycc/light.png" alt="logo" class="dyrs_logo" style="height: 40px;">
+            
+            <div class="sr-only site_name text-[16px] font-bold text-[#409EFF] leading-none tracking-tight">TV仓</div>
+            
+            
+        </a>
+    </div>
+    
+    <nav class="flex-1 px-3 py-2 space-y-1">
+        
+        
+        
+                <div class="pt-6 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center justify-between group-hover:text-blue-400 cursor-pointer" onclick="toggleSection('dianying-cats')">
+            <span>电影频道</span>
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+        <div id="dianying-cats" class="space-y-0.5 hidden">
+            
+            <a href="/dianying.html" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                全部
+            </a>
+            
+            <a href="/dianying.html?class=%E5%89%A7%E6%83%85" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                剧情
+            </a>
+            
+            <a href="/dianying.html?class=%E5%96%9C%E5%89%A7" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                喜剧
+            </a>
+            
+            <a href="/dianying.html?class=%E5%8A%A8%E4%BD%9C" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                动作
+            </a>
+            
+            <a href="/dianying.html?class=%E7%88%B1%E6%83%85" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                爱情
+            </a>
+            
+            <a href="/dianying.html?class=%E6%83%8A%E6%82%9A" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                惊悚
+            </a>
+            
+            <a href="/dianying.html?class=%E7%8A%AF%E7%BD%AA" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                犯罪
+            </a>
+            
+            <a href="/dianying.html?class=%E6%81%90%E6%80%96" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                恐怖
+            </a>
+            
+            <a href="/dianying.html?class=%E6%82%AC%E7%96%91" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                悬疑
+            </a>
+            
+            <a href="/dianying.html?class=%E5%86%92%E9%99%A9" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                冒险
+            </a>
+            
+            <a href="/dianying.html?class=%E5%A5%87%E5%B9%BB" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                奇幻
+            </a>
+            
+            <a href="/dianying.html?class=%E7%A7%91%E5%B9%BB" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                科幻
+            </a>
+            
+            <a href="/dianying.html?class=%E9%99%A2%E7%BA%BF" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                院线
+            </a>
+            
+            <a href="/dianying.html?class=%E5%AE%B6%E5%BA%AD" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                家庭
+            </a>
+            
+            <a href="/dianying.html?class=%E5%8E%86%E5%8F%B2" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                历史
+            </a>
+            
+            <a href="/dianying.html?class=%E6%88%98%E4%BA%89" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                战争
+            </a>
+            
+            <a href="/dianying.html?class=%E7%BA%AA%E5%BD%95%E7%89%87" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                纪录片
+            </a>
+            
+            <a href="/dianying.html?class=%E5%8F%A4%E8%A3%85" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                古装
+            </a>
+            
+            <a href="/dianying.html?class=%E9%9F%B3%E4%B9%90" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                音乐
+            </a>
+            
+            <a href="/dianying.html?class=%E5%8A%A8%E7%94%BB" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                动画
+            </a>
+            
+            <a href="/dianying.html?class=%E4%BC%A0%E8%AE%B0" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                传记
+            </a>
+            
+            <a href="/dianying.html?class=%E6%AD%A6%E4%BE%A0" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                武侠
+            </a>
+            
+            <a href="/dianying.html?class=%E8%BF%90%E5%8A%A8" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                运动
+            </a>
+            
+            <a href="/dianying.html?class=%E8%A5%BF%E9%83%A8" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                西部
+            </a>
+            
+            <a href="/dianying.html?class=%E7%9F%AD%E7%89%87" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                短片
+            </a>
+            
+        </div>
+        
+        
+                <div class="pt-6 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center justify-between group-hover:text-blue-400 cursor-pointer" onclick="toggleSection('dianshiju-cats')">
+            <span>电视剧频道</span>
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+        <div id="dianshiju-cats" class="space-y-0.5 hidden">
+            
+            <a href="/dianshiju.html" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                全部
+            </a>
+            
+            <a href="/dianshiju.html?class=%E5%89%A7%E6%83%85" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                剧情
+            </a>
+            
+            <a href="/dianshiju.html?class=%E5%96%9C%E5%89%A7" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                喜剧
+            </a>
+            
+            <a href="/dianshiju.html?class=%E7%88%B1%E6%83%85" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                爱情
+            </a>
+            
+            <a href="/dianshiju.html?class=%E7%8A%AF%E7%BD%AA" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                犯罪
+            </a>
+            
+            <a href="/dianshiju.html?class=%E6%82%AC%E7%96%91" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                悬疑
+            </a>
+            
+            <a href="/dianshiju.html?class=%E5%AE%B6%E5%BA%AD" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                家庭
+            </a>
+            
+            <a href="/dianshiju.html?class=%E5%8F%A4%E8%A3%85" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                古装
+            </a>
+            
+            <a href="/dianshiju.html?class=%E6%83%8A%E6%82%9A" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                惊悚
+            </a>
+            
+            <a href="/dianshiju.html?class=%E5%8A%A8%E4%BD%9C" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                动作
+            </a>
+            
+            <a href="/dianshiju.html?class=%E5%A5%87%E5%B9%BB" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                奇幻
+            </a>
+            
+            <a href="/dianshiju.html?class=%E7%A7%91%E5%B9%BB" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                科幻
+            </a>
+            
+            <a href="/dianshiju.html?class=%E9%83%BD%E5%B8%82" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                都市
+            </a>
+            
+            <a href="/dianshiju.html?class=%E5%8E%86%E5%8F%B2" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                历史
+            </a>
+            
+            <a href="/dianshiju.html?class=%E6%88%98%E4%BA%89" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                战争
+            </a>
+            
+            <a href="/dianshiju.html?class=%E5%86%92%E9%99%A9" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                冒险
+            </a>
+            
+            <a href="/dianshiju.html?class=%E6%AD%A6%E4%BE%A0" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                武侠
+            </a>
+            
+            <a href="/dianshiju.html?class=%E6%81%90%E6%80%96" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                恐怖
+            </a>
+            
+            <a href="/dianshiju.html?class=%E9%9D%92%E6%98%A5" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                青春
+            </a>
+            
+            <a href="/dianshiju.html?class=%E4%BC%A0%E8%AE%B0" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                传记
+            </a>
+            
+            <a href="/dianshiju.html?class=%E8%B0%8D%E6%88%98" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                谍战
+            </a>
+            
+            <a href="/dianshiju.html?class=%E6%83%85%E6%84%9F" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                情感
+            </a>
+            
+            <a href="/dianshiju.html?class=%E7%BA%AA%E5%BD%95" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                纪录
+            </a>
+            
+            <a href="/dianshiju.html?class=%E5%86%9B%E6%97%85" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                军旅
+            </a>
+            
+            <a href="/dianshiju.html?class=%E6%97%B6%E8%A3%85" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                时装
+            </a>
+            
+        </div>
+        
+        
+                <div class="pt-6 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center justify-between group-hover:text-blue-400 cursor-pointer" onclick="toggleSection('zongyi-cats')">
+            <span>综艺频道</span>
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+        <div id="zongyi-cats" class="space-y-0.5 hidden">
+            
+            <a href="/zongyi.html" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                全部
+            </a>
+            
+            <a href="/zongyi.html?class=%E7%9C%9F%E4%BA%BA%E7%A7%80" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                真人秀
+            </a>
+            
+            <a href="/zongyi.html?class=%E8%84%B1%E5%8F%A3%E7%A7%80" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                脱口秀
+            </a>
+            
+            <a href="/zongyi.html?class=%E5%9B%BD%E4%BA%A7%E7%BB%BC%E8%89%BA" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                国产综艺
+            </a>
+            
+            <a href="/zongyi.html?class=%E5%96%9C%E5%89%A7" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                喜剧
+            </a>
+            
+            <a href="/zongyi.html?class=%E6%99%9A%E4%BC%9A" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                晚会
+            </a>
+            
+            <a href="/zongyi.html?class=%E7%BB%BC%E8%89%BA" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                综艺
+            </a>
+            
+            <a href="/zongyi.html?class=%E9%9F%B3%E4%B9%90" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                音乐
+            </a>
+            
+            <a href="/zongyi.html?class=%E7%BA%AA%E5%BD%95" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                纪录
+            </a>
+            
+            <a href="/zongyi.html?class=%E6%B8%B8%E6%88%8F" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                游戏
+            </a>
+            
+            <a href="/zongyi.html?class=%E7%94%9F%E6%B4%BB" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                生活
+            </a>
+            
+            <a href="/zongyi.html?class=%E6%B8%AF%E5%8F%B0%E7%BB%BC%E8%89%BA" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                港台综艺
+            </a>
+            
+            <a href="/zongyi.html?class=%E6%97%A5%E9%9F%A9%E7%BB%BC%E8%89%BA" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                日韩综艺
+            </a>
+            
+            <a href="/zongyi.html?class=%E5%89%A7%E6%83%85" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                剧情
+            </a>
+            
+            <a href="/zongyi.html?class=%E6%96%87%E5%8C%96" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                文化
+            </a>
+            
+            <a href="/zongyi.html?class=%E7%9B%B8%E5%A3%B0" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                相声
+            </a>
+            
+            <a href="/zongyi.html?class=%E6%83%85%E6%84%9F" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                情感
+            </a>
+            
+            <a href="/zongyi.html?class=%E6%82%AC%E7%96%91" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                悬疑
+            </a>
+            
+            <a href="/zongyi.html?class=%E6%AC%A7%E7%BE%8E%E7%BB%BC%E8%89%BA" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                欧美综艺
+            </a>
+            
+            <a href="/zongyi.html?class=%E7%BE%8E%E9%A3%9F" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                美食
+            </a>
+            
+            <a href="/zongyi.html?class=%E7%AB%9E%E6%8A%80" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                竞技
+            </a>
+            
+            <a href="/zongyi.html?class=%E7%88%B1%E6%83%85" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                爱情
+            </a>
+            
+            <a href="/zongyi.html?class=%E7%8A%AF%E7%BD%AA" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                犯罪
+            </a>
+            
+            <a href="/zongyi.html?class=%E5%AE%B6%E5%BA%AD" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                家庭
+            </a>
+            
+            <a href="/zongyi.html?class=%E5%8E%86%E5%8F%B2" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                历史
+            </a>
+            
+        </div>
+        
+        
+                <div class="pt-6 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center justify-between group-hover:text-blue-400 cursor-pointer" onclick="toggleSection('dongman-cats')">
+            <span>动漫频道</span>
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+        <div id="dongman-cats" class="space-y-0.5 hidden">
+            
+            <a href="/dongman.html" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                全部
+            </a>
+            
+            <a href="/dongman.html?class=%E5%8A%A8%E7%94%BB" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                动画
+            </a>
+            
+            <a href="/dongman.html?class=%E5%86%92%E9%99%A9" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                冒险
+            </a>
+            
+            <a href="/dongman.html?class=%E5%96%9C%E5%89%A7" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                喜剧
+            </a>
+            
+            <a href="/dongman.html?class=%E5%A5%87%E5%B9%BB" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                奇幻
+            </a>
+            
+            <a href="/dongman.html?class=%E5%89%A7%E6%83%85" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                剧情
+            </a>
+            
+            <a href="/dongman.html?class=%E7%A7%91%E5%B9%BB" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                科幻
+            </a>
+            
+            <a href="/dongman.html?class=%E5%8A%A8%E4%BD%9C" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                动作
+            </a>
+            
+            <a href="/dongman.html?class=%E5%84%BF%E7%AB%A5" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                儿童
+            </a>
+            
+            <a href="/dongman.html?class=%E6%82%AC%E7%96%91" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                悬疑
+            </a>
+            
+            <a href="/dongman.html?class=%E9%83%BD%E5%B8%82" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                都市
+            </a>
+            
+            <a href="/dongman.html?class=%E5%AE%B6%E5%BA%AD" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                家庭
+            </a>
+            
+            <a href="/dongman.html?class=%E5%9B%BD%E6%BC%AB" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                国漫
+            </a>
+            
+            <a href="/dongman.html?class=%E6%97%A5%E5%B8%B8" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                日常
+            </a>
+            
+            <a href="/dongman.html?class=%E7%88%B1%E6%83%85" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                爱情
+            </a>
+            
+            <a href="/dongman.html?class=%E7%8E%84%E5%B9%BB" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                玄幻
+            </a>
+            
+            <a href="/dongman.html?class=%E6%97%A5%E6%BC%AB" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                日漫
+            </a>
+            
+            <a href="/dongman.html?class=%E9%9F%B3%E4%B9%90" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                音乐
+            </a>
+            
+            <a href="/dongman.html?class=%E6%B2%BB%E6%84%88" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                治愈
+            </a>
+            
+            <a href="/dongman.html?class=%E7%9F%AD%E7%89%87" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                短片
+            </a>
+            
+            <a href="/dongman.html?class=%E5%8F%A4%E9%A3%8E" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                古风
+            </a>
+            
+            <a href="/dongman.html?class=%E7%8A%AF%E7%BD%AA" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                犯罪
+            </a>
+            
+            <a href="/dongman.html?class=%E6%AD%A6%E4%BE%A0" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                武侠
+            </a>
+            
+            <a href="/dongman.html?class=%E8%BF%90%E5%8A%A8" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                运动
+            </a>
+            
+            <a href="/dongman.html?class=%E6%A0%A1%E5%9B%AD" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                校园
+            </a>
+            
+        </div>
+        
+        
+                <div class="pt-6 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center justify-between group-hover:text-blue-400 cursor-pointer" onclick="toggleSection('duanju-cats')">
+            <span>短剧频道</span>
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+        <div id="duanju-cats" class="space-y-0.5 hidden">
+            
+            <a href="/duanju.html" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                全部
+            </a>
+            
+            <a href="/duanju.html?class=AI%E6%BC%AB%E5%89%A7" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                AI漫剧
+            </a>
+            
+            <a href="/duanju.html?class=%E7%9F%AD%E5%89%A7" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                短剧
+            </a>
+            
+            <a href="/duanju.html?class=%E5%89%A7%E6%83%85" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                剧情
+            </a>
+            
+            <a href="/duanju.html?class=%E7%88%B1%E6%83%85" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                爱情
+            </a>
+            
+            <a href="/duanju.html?class=%E7%88%BD%E6%96%87" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                爽文
+            </a>
+            
+            <a href="/duanju.html?class=%E5%8F%A4%E8%A3%85" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                古装
+            </a>
+            
+            <a href="/duanju.html?class=%E7%9F%AD%E7%89%87" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                短片
+            </a>
+            
+            <a href="/duanju.html?class=%E6%82%AC%E7%96%91" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                悬疑
+            </a>
+            
+            <a href="/duanju.html?class=%E5%96%9C%E5%89%A7" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                喜剧
+            </a>
+            
+            <a href="/duanju.html?class=%E5%A5%87%E5%B9%BB" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                奇幻
+            </a>
+            
+            <a href="/duanju.html?class=%E9%83%BD%E5%B8%82" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                都市
+            </a>
+            
+            <a href="/duanju.html?class=%E7%8E%84%E5%B9%BB" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                玄幻
+            </a>
+            
+            <a href="/duanju.html?class=%E7%8A%AF%E7%BD%AA" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                犯罪
+            </a>
+            
+            <a href="/duanju.html?class=%E5%AE%B6%E5%BA%AD" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                家庭
+            </a>
+            
+            <a href="/duanju.html?class=%E7%A9%BF%E8%B6%8A" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                穿越
+            </a>
+            
+            <a href="/duanju.html?class=%E6%83%8A%E6%82%9A" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                惊悚
+            </a>
+            
+            <a href="/duanju.html?class=%E6%AD%A6%E4%BE%A0" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                武侠
+            </a>
+            
+            <a href="/duanju.html?class=%E7%A7%91%E5%B9%BB" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                科幻
+            </a>
+            
+            <a href="/duanju.html?class=%E5%8A%A8%E4%BD%9C" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                动作
+            </a>
+            
+            <a href="/duanju.html?class=%E5%86%92%E9%99%A9" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                冒险
+            </a>
+            
+            <a href="/duanju.html?class=%E6%81%90%E6%80%96" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                恐怖
+            </a>
+            
+            <a href="/duanju.html?class=%E9%9D%92%E6%98%A5" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                青春
+            </a>
+            
+            <a href="/duanju.html?class=%E5%8E%86%E5%8F%B2" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                历史
+            </a>
+            
+            <a href="/duanju.html?class=%E5%8A%A8%E7%94%BB" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                动画
+            </a>
+            
+            <a href="/duanju.html?class=%E6%88%98%E4%BA%89" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                战争
+            </a>
+            
+        </div>
+        
+        
+
+          <div class="pt-6 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center justify-between group-hover:text-blue-400 cursor-pointer" onclick="toggleSection('hot-cats')">
+      <span>热门排行</span>
+      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </div>
+        <div id="hot-cats" class="space-y-0.5 hidden">
+            
+            
+            <a href="/dianying.html?sort_field=play_hot" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                电影
+            </a>
+            
+            
+            <a href="/dianshiju.html?sort_field=play_hot" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                电视剧
+            </a>
+            
+            
+            <a href="/zongyi.html?sort_field=play_hot" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                综艺
+            </a>
+            
+            
+            <a href="/dongman.html?sort_field=play_hot" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                动漫
+            </a>
+            
+            
+            <a href="/duanju.html?sort_field=play_hot" class="flex items-center px-4 py-2 text-sm text-gray-500 hover:text-[#409EFF] hover:bg-gray-50 rounded-md transition-colors ml-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 group-hover:bg-[#409EFF]"></span>
+                短剧
+            </a>
+            
+        </div>
+        </div>
+       <a href="/live.html" class="group flex items-center px-4 py-3 text-sm font-bold text-gray-600 hover:text-[#409EFF] hover:bg-gray-50 rounded-lg transition-colors mb-2">
+  
+  <svg class="w-4 h-4 mr-3 text-gray-600 group-hover:text-[#409EFF]" viewBox="0 0 1024 1024">
+    <path fill="currentColor" d="M857.3696 833.3312c-63.0016 0.1536-126.0032 0.1024-189.0048 0.1024h-5.9648c-0.0512-0.384-0.128-0.7424-0.1792-1.1264 1.5616-0.7936 3.1232-1.6384 4.7104-2.4064 38.6304-18.7136 73.1904-43.264 102.1696-74.88 79.1296-86.272 109.9008-187.6736 90.8288-303.1808-12.6976-76.928-48.5632-142.4896-105.856-195.2-83.4304-76.7488-182.272-106.88-294.3488-90.5728-79.7184 11.5968-147.6608 47.7184-202.1632 106.9056-77.184 83.7888-107.4944 183.1168-90.4704 295.7312 13.3376 88.1152 56.0384 160.5376 124.8256 216.9344 65.7152 53.888 141.8496 79.36 226.6624 79.3088 112.8192-0.0512 225.664-0.0768 338.4832-0.128 0.6656 0 1.3568-0.0768 1.9968 0.0256 3.0208 0.4608 4.0704-0.6656 3.968-3.8144-0.2304-7.3216-0.384-14.6688 0.0256-21.9904 0.3072-4.6336-1.152-5.7344-5.6832-5.7088zM305.152 605.1584c-53.12 0.4352-95.104-40.5504-95.5904-93.2608-0.4352-50.3808 41.7024-93.2864 91.776-93.7728 51.4048-0.4864 94.9504 39.5008 95.3856 93.696 0.4096 50.56-41.6256 92.928-91.5712 93.3376z m206.976 210.2784c-52.3776 0.4608-94.08-43.776-93.44-94.3104 0.6656-51.0208 42.2656-92.6464 93.7984-92.5696 51.4048 0.1024 93.5168 42.3424 93.3632 93.6448-0.1792 51.5072-42.0864 93.2352-93.7216 93.2352z m-32.9728-304.8192c0.0256-19.2 15.744-34.688 35.1488-34.6368 18.9696 0.0768 34.56 15.7184 34.5344 34.7136 0 19.0976-15.9744 35.1488-34.8928 35.072-19.0208-0.0256-34.816-16-34.7904-35.1488z m33.7664-115.1744c-51.5072-0.0256-93.7984-41.6512-93.568-93.312 0.256-56.2944 46.2848-94.2848 93.7728-93.5424 51.5328 0 93.3888 41.9328 93.312 93.4912-0.0768 51.5584-41.9584 93.3888-93.5168 93.3632z m115.6352 115.8656c0.4608-52.8128 42.5216-93.9264 96.2816-93.0048 47.8208 0.8192 90.6752 39.4752 90.7776 93.5168 0.1024 52.3008-42.752 93.9776-94.5408 93.3632-51.3536-0.64-92.9536-42.8288-92.5184-93.8752z"></path>
+  </svg>
+  <span>放映厅</span>
+</a>
+        <a href="/dianying.html?origin=王者TV蓝光" class="flex items-center px-4 py-3 text-sm font-bold text-gray-600 hover:text-[#409EFF] hover:bg-gray-50 rounded-lg transition-colors mb-2">
+            <svg class="w-4 h-4 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <span>蓝光电影</span>
+        </a>
+                
+
+        <a href="/his.html" class="hisurl flex items-center px-4 py-3 text-sm font-bold text-gray-600 hover:text-[#409EFF] hover:bg-gray-50 rounded-lg transition-colors mb-2">
+            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span>观看历史</span>
+        </a>
+        
+
+        
+        <a href="javascript:void(0)" onclick="openShareModal()" class="flex items-center px-4 py-3 text-sm font-bold text-gray-600 hover:text-[#409EFF] hover:bg-gray-50 rounded-lg transition-colors mb-2">
+            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
+            </svg>
+            <span>分享当前页</span>
+        </a>
+
+        
+        <a href="/message.html" class="flex items-center px-4 py-3 text-sm font-bold text-gray-600 hover:text-[#409EFF] hover:bg-gray-50 rounded-lg transition-colors mb-2">
+            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
+            </svg>
+            <span>留言求片</span>
+        </a>
+        
+        
+        <a href="/pub.html" class="flex items-center px-4 py-3 text-sm font-bold text-gray-600 hover:text-[#409EFF] hover:bg-gray-50 rounded-lg transition-colors mb-2 showad hidden">
+            
+            <span>网址/APP发布</span>
+        </a>
+        
+        
+        <a href="https://wztv-app-3.cc/%E7%94%B5%E5%BD%B1%E4%BA%BA%E7%94%9F%E4%B8%93%E7%94%A8%E4%B8%8B%E8%BD%BD%E5%99%A8.exe" target="_blank" download="电影人生专用下载器" class="flex items-center px-4 py-3 text-sm font-bold text-gray-600 hover:text-[#409EFF] hover:bg-gray-50 rounded-lg transition-colors mb-2 hidden showad">
+            
+            <span>电影人生专用下载器</span>
+        </a>
+    </nav>
+</aside>
+
+
+
+
+
+
+
+<header class="hidden md:flex items-center justify-between px-8 py-5 bg-white sticky top-0 z-40 border-b border-gray-50">
+     <div class="flex-1 max-w-xl">
+        <form action="/s.html" method="get" class="relative group" autocomplete="off" novalidate>
+            
+            <input autocomplete="off" novalidate type="text" name="name" value="" placeholder="搜索电影、剧集..." class="w-full bg-gray-50 border-none rounded-full py-2.5 pl-12 pr-12 text-sm text-gray-700  transition-all duration-300">
+            
+            <svg class="w-5 h-5 text-gray-400 absolute left-4 top-2.5 group-hover:text-[#409EFF] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <button type="submit" class="absolute right-1.5 top-1.5 bg-[#409EFF] hover:bg-blue-600 text-white p-1.5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50 active:transform active:scale-95" aria-label="搜索">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            </button>
+        </form>
+    </div>
+
+    
+    <div class="flex items-center gap-4 ml-4">
+        
+        <button id="nav_install_btn" class="btn-add-desktop hidden items-center gap-1 text-[#409EFF] hover:text-blue-600 font-bold text-sm transition-colors mt-1" title="安装桌面客户端">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            <span class="hidden lg:inline">安装客户端</span>
+        </button>
+        
+        <button onclick="openAnnouncements()" class="relative text-gray-500 hover:text-[#409EFF] transition-colors mt-1">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+            <span class="notification-badge absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 min-w-[16px] h-[16px] flex items-center justify-center rounded-full hidden">0</span>
+        </button>
+
+        <div class="user-guest flex items-center gap-3">
+            <button onclick="openUserModal('login')" class="text-gray-500 hover:text-[#409EFF] font-medium text-sm transition-colors">登录</button>
+            <span class="text-gray-300">|</span>
+            <button onclick="openUserModal('signup')" class="bg-[#409EFF] hover:bg-blue-600 text-white px-5 py-2 rounded-full font-medium text-sm shadow-lg shadow-blue-100 transition-all">注册</button>
+        </div>
+        
+        <div class="user-logged-in hidden flex items-center gap-3 group relative">
+            <a href="/center.html" class="flex items-center gap-2 hover:bg-gray-50 p-1.5 rounded-lg transition-colors">
+                <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#409EFF] font-bold text-sm">
+                    <img class="rounded-full userAvatar w-full h-full object-cover">
+                </div>
+                <span class="text-sm font-bold text-gray-700 user-name-display max-w-[100px] truncate">用户</span>
+            </a>
+            
+            
+            <div class="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform origin-top-right z-50">
+                <div class="p-2 space-y-1">
+                    <a href="/center.html" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-[#409EFF] rounded-lg transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                        个人中心
+                    </a>
+                    
+                </div>
+            </div>
+        </div>
+        
+        
+        
+
+        
+        <svg onclick="switchdark()" t="1775402217664" class="cursor-pointer hover:opacity-80 transition-opacity ml-2" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="9050" width="28" height="28"><path d="M512.0512 938.496a426.6496 426.6496 0 1 1 0-853.2992 426.6496 426.6496 0 0 1 0 853.3504z m0-85.2992a341.3504 341.3504 0 1 0 0-682.6496 341.3504 341.3504 0 0 0 0 682.6496z m-213.2992-199.68a382.5152 382.5152 0 0 0 243.5072-111.4624 382.5152 382.5152 0 0 0 111.4112-243.5072 256 256 0 1 1-354.9184 354.9184z" fill="#409EFF" fill-opacity=".6" p-id="9051"></path></svg>
+    </div>
+</header>
+
+
+
+
+<div class="md:hidden bg-white shadow-sm sticky top-0 z-50 px-4 h-16 flex items-center justify-between pt-[env(safe-area-inset-top)] pt-[constant(safe-area-inset-top)]">
+    <a href="/" class="flex items-center gap-2 group">
+        
+        <img src="/template/wzzycc/light.png" alt="logo" class="dyrs_logo" style="height: 40px;">
+        <div class="sr-only  text-[16px] font-bold text-[#409EFF] leading-none tracking-tight">TV仓</div>
+        
+    </a>
+    <div class="flex items-center gap-4">
+        <button onclick="toggleSearch()" class="text-gray-600 hover:text-[#409EFF]">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </button>
+        <a href="/his.html" class="hisurl text-gray-600 hover:text-[#409EFF]">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+        </a>
+        
+        <a href="javascript:void(0)" onclick="switchdark()" class="text-gray-600 hover:text-[#409EFF]">
+            <svg t="1775402217664" class="w-6 h-6" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="9050"><path d="M512.0512 938.496a426.6496 426.6496 0 1 1 0-853.2992 426.6496 426.6496 0 0 1 0 853.3504z m0-85.2992a341.3504 341.3504 0 1 0 0-682.6496 341.3504 341.3504 0 0 0 0 682.6496z m-213.2992-199.68a382.5152 382.5152 0 0 0 243.5072-111.4624 382.5152 382.5152 0 0 0 111.4112-243.5072 256 256 0 1 1-354.9184 354.9184z" fill="currentColor" p-id="9051"></path></svg>
+        </a>
+        
+        <a href="#" id="mobile-app-download" target="_blank" class="text-gray-600 hover:text-[#409EFF] hidden showad">
+            <svg t="1770749098246" class="w-6 h-6" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="16162" width="4096" height="4096"><path d="M270.1 741.7c0 23.4 19.1 42.5 42.6 42.5h48.7v120.4c0 30.5 24.5 55.4 54.6 55.4 30.2 0 54.6-24.8 54.6-55.4V784.1h85v120.4c0 30.5 24.5 55.4 54.6 55.4 30.2 0 54.6-24.8 54.6-55.4V784.1h48.7c23.5 0 42.6-19.1 42.6-42.5V346.4h-486v395.3z m357.1-600.1l44.9-65c2.6-3.8 2-8.9-1.5-11.4-3.5-2.4-8.5-1.2-11.1 2.6l-46.6 67.6c-30.7-12.1-64.9-18.8-100.8-18.8-35.9 0-70.1 6.7-100.8 18.8l-46.6-67.5c-2.6-3.8-7.6-5.1-11.1-2.6-3.5 2.4-4.1 7.4-1.5 11.4l44.9 65c-71.4 33.2-121.4 96.1-127.8 169.6h486c-6.6-73.6-56.7-136.5-128-169.7zM409.5 244.1c-14.8 0-26.9-12-26.9-26.9 0-14.8 12-26.9 26.9-26.9 14.8 0 26.9 12 26.9 26.9-0.1 14.9-12.1 26.9-26.9 26.9z m208.4 0c-14.8 0-26.9-12-26.9-26.9 0-14.8 12-26.9 26.9-26.9 14.8 0 26.9 12 26.9 26.9-0.1 14.9-12.1 26.9-26.9 26.9z m223.4 100.7c-30.2 0-54.6 24.8-54.6 55.4v216.4c0 30.5 24.5 55.4 54.6 55.4 30.2 0 54.6-24.8 54.6-55.4V400.1c0.1-30.6-24.3-55.3-54.6-55.3z m-658.6 0c-30.2 0-54.6 24.8-54.6 55.4v216.4c0 30.5 24.5 55.4 54.6 55.4 30.2 0 54.6-24.8 54.6-55.4V400.1c0-30.6-24.5-55.3-54.6-55.3z" fill="#409EFF" p-id="16163"></path></svg>
+        </a>
+        <button onclick="toggleMobileMenu()" class="text-gray-600 hover:text-[#409EFF]">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        </button>
+    </div>
+</div>
+
+
+<div id="userModal" class="fixed inset-0 bg-black/50 z-[100] hidden flex items-center justify-center backdrop-blur-sm transition-opacity opacity-0 pointer-events-none">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 transform transition-all scale-95 opacity-0 p-6 md:p-8" id="userModalContent">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex space-x-6 text-lg font-bold items-baseline">
+                <button class="auth-tab-btn text-[#409EFF] border-b-2 border-[#409EFF] pb-1 transition-colors" data-target="login">登录</button>
+                <button class="auth-tab-btn text-gray-500 border-transparent border-b-2 pb-1 hover:text-gray-800 transition-colors" data-target="signup">注册</button>
+                <button class="text-[#409EFF] text-xs font-normal bg-blue-50 px-2 py-1 rounded hover:bg-[#409EFF] hover:text-white transition-colors -ml-2" onclick="confirmSSOLogin()">记忆登陆</button>
+            </div>
+            <button onclick="closeUserModal()" class="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        
+        
+        <div id="loginFormContainer">
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">用户名</label>
+                    <input type="text" name="username" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-100 focus:border-[#409EFF] outline-none transition-all" placeholder="请输入用户名" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">密码</label>
+                    <input type="password" name="password" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-100 focus:border-[#409EFF] outline-none transition-all" placeholder="请输入密码" required>
+                </div>
+                <button type="submit" class="w-full bg-[#409EFF] hover:bg-blue-600 text-white py-3 rounded-xl font-bold text-sm shadow-lg shadow-blue-200 hover:shadow-blue-300 transition-all transform hover:-translate-y-0.5 mt-2">立即登录</button>
+            </form>
+        </div>
+
+        
+        <div id="signupFormContainer" class="hidden">
+            <form id="signupForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">用户名</label>
+                    <input type="text" name="username" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-100 focus:border-[#409EFF] outline-none transition-all" placeholder="设置用户名（仅限中英文/数字）" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">密码</label>
+                    <input type="password" name="password" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-100 focus:border-[#409EFF] outline-none transition-all" placeholder="设置登录密码" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">验证码</label>
+                    <div class="flex items-center gap-3">
+                        <input type="text" name="code_val" class="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-100 focus:border-[#409EFF] outline-none transition-all" placeholder="输入验证码" required>
+                        <div class="bg-gray-100 rounded-xl overflow-hidden border border-gray-200 h-[46px] w-[100px] flex-shrink-0 cursor-pointer relative group" onclick="loadUserCaptcha(this.querySelector('img'))">
+                            <img class="captcha-image w-full h-full object-cover" src="" alt="验证码">
+                            <div class="absolute inset-0 bg-black/10 hidden group-hover:flex items-center justify-center text-white text-xs">刷新</div>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-[#409EFF] hover:bg-blue-600 text-white py-3 rounded-xl font-bold text-sm shadow-lg shadow-blue-200 hover:shadow-blue-300 transition-all transform hover:-translate-y-0.5 mt-2">立即注册</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="/template/wzzycc/user.js?v=1"></script>
+
+
+<div id="mobile-search-bar" class="md:hidden hidden bg-gray-50 p-4 border-b border-gray-100 sticky top-16 z-40">
+    <form autocomplete="off" novalidate action="/s.html" method="get" class="relative">
+        
+        <input autocomplete="off" novalidate type="text" name="name" placeholder="搜索电影、剧集..." class="w-full bg-white border border-gray-200 rounded-full py-2 pl-10 pr-12 text-sm focus:outline-none focus:border-[#409EFF] focus:ring-1 focus:ring-[#409EFF]">
+        <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <button type="submit" class="absolute right-1 top-1 bg-[#409EFF] hover:bg-blue-600 text-white p-1.5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50 active:transform active:scale-95" aria-label="搜索">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+        </button>
+    </form>
+</div>
+
+
+<div id="mobile-menu" class="fixed inset-0 bg-black/50 z-[60] hidden transition-opacity duration-300" onclick="toggleMobileMenu()">
+    <div class="absolute right-0 top-0 bottom-0 w-[200px] bg-white shadow-2xl overflow-y-auto transform transition-transform duration-300 translate-x-full" id="mobile-menu-content" onclick="event.stopPropagation()">
+        <div class="p-4 border-b border-gray-100 flex justify-between items-center">
+            <span class="font-bold text-gray-800">菜单</span>
+            <button onclick="toggleMobileMenu()" class="text-gray-500">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <nav class="p-4 pt-0 space-y-2">
+            
+            <div class="px-4 py-2 mb-2 border-b border-gray-100">
+                <div class="user-guest">
+                    <button onclick="openUserModal('login')" class="w-full bg-blue-50 text-[#409EFF] py-2 rounded-lg font-bold text-sm mb-2">登录</button>
+                    <button onclick="openUserModal('signup')" class="w-full border border-[#409EFF] text-[#409EFF] py-2 rounded-lg font-bold text-sm">注册</button>
+                </div>
+                <div class="user-logged-in hidden">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-8 h-8 rounded-full bg-gray-100 overflow-hidden border-2 border-white shadow-md relative group">
+                        <img class="userAvatar w-full h-full object-cover">
+                    </div>
+                        <div>
+                            <div class="font-bold text-gray-800 user-name-display">用户名称</div>
+                            <div class="text-xs text-gray-500">欢迎回来</div>
+                        </div>
+                    </div>
+                    <a href="/center.html" class="block w-full text-center bg-[#409EFF] text-white py-2 rounded-lg font-bold text-sm mb-2">个人中心</a>
+                </div>
+            </div>
+            
+            <a href="/" class="block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-[#409EFF] rounded-lg">首页</a>
+
+            
+            <button onclick="openAnnouncements(); toggleMobileMenu()" class="w-full text-left px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-[#409EFF] rounded-lg flex items-center justify-between">
+                <span>消息通知</span>
+                <span class="notification-badge bg-red-500 text-white text-[10px] font-bold px-1.5 min-w-[16px] h-[16px] flex items-center justify-center rounded-full hidden">0</span>
+            </button>
+
+            
+
+            
+            
+            <a href="/dianying.html" class="block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-[#409EFF] rounded-lg">电影</a>
+            
+            
+            <a href="/dianshiju.html" class="block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-[#409EFF] rounded-lg">电视剧</a>
+            
+            
+            <a href="/zongyi.html" class="block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-[#409EFF] rounded-lg">综艺</a>
+            
+            
+            <a href="/dongman.html" class="block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-[#409EFF] rounded-lg">动漫</a>
+            
+            
+            <a href="/duanju.html" class="block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-[#409EFF] rounded-lg">短剧</a>
+            
+            <a href="/dianying.html?origin=王者TV蓝光" class="block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-[#409EFF] rounded-lg">蓝光电影</a>
+            <a href="/message.html" class="block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-[#409EFF] rounded-lg">留言求片</a>
+            <a href="javascript:void(0)" onclick="openShareModal()" class="block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-[#409EFF] rounded-lg">分享当前页</a>
+            <a href="/pub.html" class="block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-[#409EFF] rounded-lg hidden showad">网址/APP发布</a>
+        </nav>
+    </div>
+</div>
+
+<script>
+    function confirmSSOLogin() {
+        if(confirm('这是sso安全登陆，用于在之前登陆过账号的浏览器，可以快速无需密码登陆，如果刷新后不行，请自行登陆')) {
+            window.location.href = '\/dianying.html?sso=sync';
+        }
+    }
+
+    function toggleSection(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('hidden');
+    }
+
+    function toggleMobileMenu() {
+        const menu = document.getElementById('mobile-menu');
+        const content = document.getElementById('mobile-menu-content');
+        
+        if (menu.classList.contains('hidden')) {
+            menu.classList.remove('hidden');
+            setTimeout(() => {
+                content.classList.remove('translate-x-full');
+            }, 10);
+        } else {
+            content.classList.add('translate-x-full');
+            setTimeout(() => {
+                menu.classList.add('hidden');
+            }, 300);
+        }
+    }
+
+    function toggleSearch() {
+        document.getElementById('mobile-search-bar').classList.toggle('hidden');
+    }
+
+    
+    let currentHost = window.location.host;
+    
+    if(currentHost!=='dyrsvip.com'){
+      currentHost='wztvyzz.com';
+    }
+    
+
+    function openShareModal() {
+        const modal = document.getElementById('shareModal');
+        const qrCode = document.getElementById('shareQrCode');
+        const currentUrlInput = document.getElementById('currentUrl');
+
+        let currentPageUrl = window.location.href;
+        
+        if (currentHost && currentHost !== window.location.host) {
+            currentPageUrl = currentPageUrl.replace(window.location.host, currentHost);
+        }
+        
+        currentUrlInput.value = currentPageUrl;
+
+        const qrCodeUrl = `/api/qrcode?url=${encodeURIComponent(currentPageUrl)}`;
+        qrCode.src = qrCodeUrl;
+        
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeShareModal() {
+        const modal = document.getElementById('shareModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    function copyCurrentUrl() {
+        const currentUrl = document.getElementById('currentUrl');
+        currentUrl.select();
+        currentUrl.setSelectionRange(0, 99999);
+        
+        try {
+            document.execCommand('copy');
+            showCopySuccess();
+        } catch (err) {
+            navigator.clipboard.writeText(currentUrl.value).then(function() {
+            showCopySuccess();
+            }).catch(function(err) {
+            alert('复制失败，请手动复制链接');
+            });
+        }
+    }
+
+    function showCopySuccess() {
+        const copyBtn = event.target.closest('button');
+        const originalText = copyBtn.innerHTML;
+        copyBtn.innerHTML = '<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>已复制';
+        copyBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+        copyBtn.classList.add('bg-gray-500');
+        
+        setTimeout(() => {
+            copyBtn.innerHTML = originalText;
+            copyBtn.classList.remove('bg-gray-500');
+            copyBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+        }, 2000);
+    }
+
+
+    document.addEventListener('click', function(event) {
+        const modal = document.getElementById('shareModal');
+        if (event.target === modal) {
+            closeShareModal();
+        }
+    });
+    window.ANNOUNCEMENTS={
+        list:[
+        { id: 'b11', text: `当前网址随时会失效！` },
+        { id: 'aa11', text: `永久网址：dyrs.me dyrs.mov 【记忆点：电影人生拼音首字母】`},
+        { id: 'a151', text: `请记住以上永久域名,如果网站卡顿、打不开、进不来。请访问永久域名,会自动寻找可用且速度快的节点` }
+        ],
+        tpl:function(id,text,isRead){
+            return `
+                <div class="p-3 rounded-lg border ${isRead ? 'bg-gray-50 border-gray-100' : 'bg-blue-50/50 border-blue-100'} transition-colors relative group">
+                    <div class="flex items-start gap-3">
+                        <div class="mt-1">
+                            ${isRead 
+                                ? `<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`
+                                : `<span class="flex w-2 h-2 rounded-full bg-red-500 mt-1.5"></span>`
+                            }
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm ${isRead ? 'text-gray-500' : 'text-gray-800 font-medium'} leading-relaxed">
+                                ${text}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        },
+        announcementModal:`<div id="announcementModal" class="fixed inset-0 bg-black/50 z-[100] hidden items-center justify-center backdrop-blur-sm transition-opacity opacity-0 pointer-events-none">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 transform transition-all scale-95 opacity-0 p-6 flex flex-col max-h-[80vh]" id="announcementModalContent">
+        <div class="flex items-center justify-between mb-4">
+            <button onclick="closeAnnouncements()" class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <h3 class="text-lg font-bold text-gray-800">消息通知</h3>
+            <button onclick="closeAnnouncements()" class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <a class="ml-4 showad mb-4" target="_blank" href="https://qm.qq.com/q/oO1yJcP1yS" style="display: flex;"><img border="0" src="//pub.idqqimg.com/wpa/images/group.png" alt="电影人生qq群" title="电影人生qq群"><span style="
+    margin-left: 10px;
+    font-size: 14px;
+" class="font-bold text-gray-800">3群
+</span></a>
+        <div id="announcementList" class="overflow-y-auto flex-1 space-y-3 pr-2">
+            \x3C!-- Rendered via JS -->
+        </div>
+    </div>
+</div>
+`
+        ,message:true
+    }
+</script>
+<script src="/template/wzzycc/announcements.js?ts=2"></script>
+
+
+<div id="shareModal" class="fixed inset-0 bg-black/50 z-[100] hidden items-center justify-center">
+  <div class="bg-white rounded-xl shadow-2xl w-[320px] md:w-[480px] w-full mx-4 transform transition-all scale-100 opacity-100 overflow-hidden">
+    
+    <div class="w-full aspect-video bg-cover bg-center" style="background-image: url('https://pic2.tupian.click/template/wzzycc/preview.webp');"></div>
+    <div class="p-6">
+      <div class="flex items-center justify-between mb-6">
+        <button onclick="closeShareModal()" class="text-gray-400 hover:text-gray-600 p-1 hover:bg-gray-100 rounded-full transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+        <h3 class="text-lg font-bold text-gray-800">分享给朋友</h3>
+        <button onclick="closeShareModal()" class="text-gray-400 hover:text-gray-600 p-1 hover:bg-gray-100 rounded-full transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      
+      <div class="text-center mb-6">
+        <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 inline-block">
+             <img id="shareQrCode" src="" alt="二维码" class="w-40 h-40 mx-auto rounded-lg">
+        </div>
+        <p class="text-xs text-gray-400 mt-3">截图或长按保存二维码</p>
+      </div>
+
+      <div class="mb-2">
+        <label class="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wide">页面链接</label>
+        <div class="flex shadow-sm rounded-lg overflow-hidden">
+          <input type="text" id="currentUrl" readonly class="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 text-sm text-gray-600 focus:outline-none">
+          <button onclick="copyCurrentUrl()" class="px-4 py-2 bg-[#409EFF] text-white hover:bg-blue-600 transition-colors flex items-center font-medium text-sm">
+            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+            </svg>
+            复制
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+  <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+
+    
+
+    
+    <section class="mb-4 bg-white rounded shadow-sm border border-gray-200 p-3">
+
+      
+      
+      <div class="space-y-0 text-xs">
+        
+        <div class="flex items-center py-1.5 border-b border-dashed border-gray-100">
+            <span class="text-gray-400 font-bold min-w-[3rem] shrink-0">频道</span>
+            <div class="flex-1 overflow-x-auto no-scrollbar md:overflow-visible">
+                <div class="flex items-center whitespace-nowrap gap-2 md:whitespace-normal md:flex-wrap">
+                    
+                    
+                    <a href="/dianying.html" class="px-2 py-1 rounded transition-all duration-200 bg-[#409EFF] text-white">
+                      电影
+                    </a>
+                    
+                    
+                    <a href="/dianshiju.html" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      电视剧
+                    </a>
+                    
+                    
+                    <a href="/zongyi.html" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      综艺
+                    </a>
+                    
+                    
+                    <a href="/dongman.html" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      动漫
+                    </a>
+                    
+                    
+                    <a href="/duanju.html" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      短剧
+                    </a>
+                    
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex items-center py-1.5 border-b border-dashed border-gray-100">
+            <span class="text-gray-400 font-bold min-w-[3rem] shrink-0">分类</span>
+            <div class="flex-1 overflow-x-auto no-scrollbar md:overflow-visible">
+                <div class="flex items-center whitespace-nowrap gap-2 md:whitespace-normal md:flex-wrap">
+                    <a href="/dianying.html" class="px-2 py-1 rounded transition-all duration-200 bg-[#409EFF] text-white">
+                      全部
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E5%89%A7%E6%83%85" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      剧情
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E5%96%9C%E5%89%A7" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      喜剧
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E5%8A%A8%E4%BD%9C" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      动作
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E7%88%B1%E6%83%85" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      爱情
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E6%83%8A%E6%82%9A" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      惊悚
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E7%8A%AF%E7%BD%AA" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      犯罪
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E6%81%90%E6%80%96" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      恐怖
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E6%82%AC%E7%96%91" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      悬疑
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E5%86%92%E9%99%A9" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      冒险
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E5%A5%87%E5%B9%BB" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      奇幻
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E7%A7%91%E5%B9%BB" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      科幻
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E9%99%A2%E7%BA%BF" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      院线
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E5%AE%B6%E5%BA%AD" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      家庭
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E5%8E%86%E5%8F%B2" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      历史
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E6%88%98%E4%BA%89" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      战争
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E7%BA%AA%E5%BD%95%E7%89%87" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      纪录片
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E5%8F%A4%E8%A3%85" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      古装
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E9%9F%B3%E4%B9%90" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      音乐
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E5%8A%A8%E7%94%BB" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      动画
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E4%BC%A0%E8%AE%B0" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      传记
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E6%AD%A6%E4%BE%A0" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      武侠
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E8%BF%90%E5%8A%A8" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      运动
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E8%A5%BF%E9%83%A8" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      西部
+                    </a>
+                    
+                    <a href="/dianying.html?class=%E7%9F%AD%E7%89%87" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      短片
+                    </a>
+                    
+                </div>
+            </div>
+        </div>
+        
+        
+        
+        <div class="flex items-center py-1.5 border-b border-dashed border-gray-100">
+            <span class="text-gray-400 font-bold min-w-[3rem] shrink-0">地区</span>
+            <div class="flex-1 overflow-x-auto no-scrollbar md:overflow-visible">
+                <div class="flex items-center whitespace-nowrap gap-2 md:whitespace-normal md:flex-wrap">
+                    <a href="/dianying.html" class="px-2 py-1 rounded transition-all duration-200 bg-[#409EFF] text-white">
+                      全部
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E4%B8%AD%E5%9B%BD%E5%A4%A7%E9%99%86"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      中国大陆
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E7%BE%8E%E5%9B%BD"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      美国
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E6%97%A5%E6%9C%AC"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      日本
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E8%8B%B1%E5%9B%BD"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      英国
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E4%B8%AD%E5%9B%BD%E9%A6%99%E6%B8%AF"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      中国香港
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E6%B3%95%E5%9B%BD"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      法国
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E9%9F%A9%E5%9B%BD"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      韩国
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E5%8A%A0%E6%8B%BF%E5%A4%A7"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      加拿大
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E5%8D%B0%E5%BA%A6"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      印度
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E5%BE%B7%E5%9B%BD"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      德国
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E6%84%8F%E5%A4%A7%E5%88%A9"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      意大利
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E4%B8%AD%E5%9B%BD%E5%8F%B0%E6%B9%BE"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      中国台湾
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E8%A5%BF%E7%8F%AD%E7%89%99"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      西班牙
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E6%B3%B0%E5%9B%BD"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      泰国
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E4%BF%84%E7%BD%97%E6%96%AF"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      俄罗斯
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E6%BE%B3%E5%A4%A7%E5%88%A9%E4%BA%9A"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      澳大利亚
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E6%AF%94%E5%88%A9%E6%97%B6"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      比利时
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E8%8F%B2%E5%BE%8B%E5%AE%BE"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      菲律宾
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E5%A2%A8%E8%A5%BF%E5%93%A5"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      墨西哥
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E4%B8%B9%E9%BA%A6"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      丹麦
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E6%B3%A2%E5%85%B0"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      波兰
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E5%8D%B0%E5%BA%A6%E5%B0%BC%E8%A5%BF%E4%BA%9A"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      印度尼西亚
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E5%9C%9F%E8%80%B3%E5%85%B6"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      土耳其
+                    </a>
+                    
+                    <a href="/dianying.html?area=%E5%B7%B4%E8%A5%BF"  class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      巴西
+                    </a>
+                    
+                </div>
+            </div>
+        </div>
+        
+        
+        
+        <div class="flex items-center py-1.5 border-b border-dashed border-gray-100">
+            <span class="text-gray-400 font-bold min-w-[3rem] shrink-0">年份</span>
+            <div class="flex-1 overflow-x-auto no-scrollbar md:overflow-visible">
+                <div class="flex items-center whitespace-nowrap gap-2 md:whitespace-normal md:flex-wrap">
+                    <a href="/dianying.html" class="px-2 py-1 rounded transition-all duration-200 bg-[#409EFF] text-white">
+                      全部
+                    </a>
+                    
+                    <a href="/dianying.html?year=2026" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2026
+                    </a>
+                    
+                    <a href="/dianying.html?year=2025" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2025
+                    </a>
+                    
+                    <a href="/dianying.html?year=2024" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2024
+                    </a>
+                    
+                    <a href="/dianying.html?year=2023" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2023
+                    </a>
+                    
+                    <a href="/dianying.html?year=2022" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2022
+                    </a>
+                    
+                    <a href="/dianying.html?year=2021" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2021
+                    </a>
+                    
+                    <a href="/dianying.html?year=2020" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2020
+                    </a>
+                    
+                    <a href="/dianying.html?year=2019" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2019
+                    </a>
+                    
+                    <a href="/dianying.html?year=2018" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2018
+                    </a>
+                    
+                    <a href="/dianying.html?year=2017" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2017
+                    </a>
+                    
+                    <a href="/dianying.html?year=2016" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2016
+                    </a>
+                    
+                    <a href="/dianying.html?year=2015" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2015
+                    </a>
+                    
+                    <a href="/dianying.html?year=2014" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2014
+                    </a>
+                    
+                    <a href="/dianying.html?year=2013" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2013
+                    </a>
+                    
+                    <a href="/dianying.html?year=2012" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2012
+                    </a>
+                    
+                    <a href="/dianying.html?year=2011" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2011
+                    </a>
+                    
+                    <a href="/dianying.html?year=2010" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2010
+                    </a>
+                    
+                    <a href="/dianying.html?year=2009" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2009
+                    </a>
+                    
+                    <a href="/dianying.html?year=2008" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2008
+                    </a>
+                    
+                    <a href="/dianying.html?year=2007" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2007
+                    </a>
+                    
+                    <a href="/dianying.html?year=2006" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2006
+                    </a>
+                    
+                    <a href="/dianying.html?year=2005" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2005
+                    </a>
+                    
+                    <a href="/dianying.html?year=2004" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2004
+                    </a>
+                    
+                    <a href="/dianying.html?year=2003" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2003
+                    </a>
+                    
+                    <a href="/dianying.html?year=2002" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2002
+                    </a>
+                    
+                    <a href="/dianying.html?year=2001" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2001
+                    </a>
+                    
+                    <a href="/dianying.html?year=2000" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2000
+                    </a>
+                    
+                    <a href="/dianying.html?year=2020%E5%B9%B4%E4%BB%A3" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2020年代
+                    </a>
+                    
+                    <a href="/dianying.html?year=2010%E5%B9%B4%E4%BB%A3" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2010年代
+                    </a>
+                    
+                    <a href="/dianying.html?year=2000%E5%B9%B4%E4%BB%A3" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      2000年代
+                    </a>
+                    
+                    <a href="/dianying.html?year=90%E5%B9%B4%E4%BB%A3" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      90年代
+                    </a>
+                    
+                    <a href="/dianying.html?year=80%E5%B9%B4%E4%BB%A3" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      80年代
+                    </a>
+                    
+                    <a href="/dianying.html?year=70%E5%B9%B4%E4%BB%A3" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      70年代
+                    </a>
+                    
+                    <a href="/dianying.html?year=60%E5%B9%B4%E4%BB%A3" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      60年代
+                    </a>
+                    
+                    <a href="/dianying.html?year=50%E5%B9%B4%E4%BB%A3" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      50年代
+                    </a>
+                    
+                    <a href="/dianying.html?year=%E6%9B%B4%E6%97%A9" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      更早
+                    </a>
+                    
+                </div>
+            </div>
+        </div>
+        
+        
+        <div class="flex items-center py-1.5">
+            <span class="text-gray-400 font-bold min-w-[3rem] shrink-0">排序</span>
+            <div class="flex-1 overflow-x-auto no-scrollbar md:overflow-visible">
+                <div class="flex items-center whitespace-nowrap gap-2 md:whitespace-normal md:flex-wrap">
+                    <a href="/dianying.html" class="px-2 py-1 rounded transition-all duration-200 bg-[#409EFF] text-white">
+                      默认
+                    </a>
+                    <a href="/dianying.html?sort_field=play_hot" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                     热度
+                    </a>
+                    
+                     <a href="/dianying.html?sort_field=group_douban" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                     豆瓣评分
+                    </a>
+                    
+                    
+                </div>
+            </div>
+        </div>
+
+        
+        <div class="flex items-center py-1.5 border-t border-dashed border-gray-100">
+            <span class="text-gray-400 font-bold min-w-[3rem] shrink-0">高级</span>
+            <div class="flex-1 overflow-x-auto no-scrollbar md:overflow-visible">
+                <div class="flex items-center whitespace-nowrap gap-2 md:whitespace-normal md:flex-wrap">
+                    <a href="/dianying.html" class="px-2 py-1 rounded transition-all duration-200 bg-[#409EFF] text-white">
+                      全部
+                    </a>
+                    <a href="/dianying.html?origin=%E7%8E%8B%E8%80%85TV%E8%93%9D%E5%85%89" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      超清1080p
+                    </a>
+                    <a href="/dianying.html?ban=true" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      文艺片
+                    </a>
+                    <a href="/dianying.html?class=%E7%BA%AA%E5%BD%95%E7%89%87" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      纪录片
+                    </a>
+                </div>
+            </div>
+        </div>
+              
+      <div class="flex items-center py-1.5 border-t border-dashed border-gray-100">
+            <span class="text-gray-400 font-bold min-w-[3rem] shrink-0">排除</span>
+            <div class="flex-1 overflow-x-auto no-scrollbar md:overflow-visible">
+                <div class="flex items-center whitespace-nowrap gap-2 md:whitespace-normal md:flex-wrap">
+                    
+
+                    <a href="/dianying.html?exclude_his=true" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      已观看
+                    </a>
+                    <a href="/dianying.html?exclude_unlike=true" class="px-2 py-1 rounded transition-all duration-200 text-gray-600 hover:text-[#409EFF]">
+                      不想看
+                    </a>
+                </div>
+            </div>
+        </div>
+      </div>
+
+      </div>
+      
+
+    </section>
+    
+    
+    
+    <section class="mb-8">
+      <div id="image-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6  gap-2">
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6acbb1a0f43e6fb9869a6d24-38759.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="什么意思夫妇" data-url="/movie/6acbb1a0f43e6fb9869a6d24/38759.html" data-cover="/movie/6acbb1a0f43e6fb9869a6d24-38759.html">
+        <img data-src="/img/id/6acbb1a0f43e6fb9869a6d24.jpg" alt="什么意思夫妇" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            抢先版
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="什么意思夫妇">
+            什么意思夫妇
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2026</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6acba223140cd12c35257d03-46343.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="神探之痕迹‎" data-url="/movie/6acba223140cd12c35257d03/46343.html" data-cover="/movie/6acba223140cd12c35257d03-46343.html">
+        <img data-src="/img/id/6acba223140cd12c35257d03.jpg" alt="神探之痕迹‎" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            抢先版
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="神探之痕迹‎">
+            神探之痕迹‎
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2026</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6acb94838162e1595b5b6959-17042.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="深渊长歌" data-url="/movie/6acb94838162e1595b5b6959/17042.html" data-cover="/movie/6acb94838162e1595b5b6959-17042.html">
+        <img data-src="/img/id/6acb94838162e1595b5b6959.jpg" alt="深渊长歌" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            HD中字
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="深渊长歌">
+            深渊长歌
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2025</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6acb942f282f4befca2cfd9c-13787.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="当爱开口时" data-url="/movie/6acb942f282f4befca2cfd9c/13787.html" data-cover="/movie/6acb942f282f4befca2cfd9c-13787.html">
+        <img data-src="/img/id/6acb942f282f4befca2cfd9c.jpg" alt="当爱开口时" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            HD中字
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="当爱开口时">
+            当爱开口时
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2025</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6ac7823a10376beadb1c44de-45110.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="青春的长征" data-url="/movie/6ac7823a10376beadb1c44de/45110.html" data-cover="/movie/6ac7823a10376beadb1c44de-45110.html">
+        <img data-src="/img/id/6ac7823a10376beadb1c44de.jpg" alt="青春的长征" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            更新至第3集
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="青春的长征">
+            青春的长征
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2026</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6acb64331b796e8eeac21de7-10698.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="莉兹·波登复苏" data-url="/movie/6acb64331b796e8eeac21de7/10698.html" data-cover="/movie/6acb64331b796e8eeac21de7-10698.html">
+        <img data-src="/img/id/6acb64331b796e8eeac21de7.jpg" alt="莉兹·波登复苏" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            正片
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="莉兹·波登复苏">
+            莉兹·波登复苏
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2026</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6acb3b1c602d5bf9822a9b70-38977.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="小妹危险" data-url="/movie/6acb3b1c602d5bf9822a9b70/38977.html" data-cover="/movie/6acb3b1c602d5bf9822a9b70-38977.html">
+        <img data-src="/img/id/6acb3b1c602d5bf9822a9b70.jpg" alt="小妹危险" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            正片
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="小妹危险">
+            小妹危险
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2026</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6acb0fdfcdac0bd0d4133b39-42274.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="情归俯首" data-url="/movie/6acb0fdfcdac0bd0d4133b39/42274.html" data-cover="/movie/6acb0fdfcdac0bd0d4133b39-42274.html">
+        <img data-src="/img/id/6acb0fdfcdac0bd0d4133b39.jpg" alt="情归俯首" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            正片
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="情归俯首">
+            情归俯首
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2026</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6ac9bb651a107fc86a9b3815-38070.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="我的美食向导 第二季" data-url="/movie/6ac9bb651a107fc86a9b3815/38070.html" data-cover="/movie/6ac9bb651a107fc86a9b3815-38070.html">
+        <img data-src="/img/id/6ac9bb651a107fc86a9b3815.jpg" alt="我的美食向导 第二季" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            更新至20261011第1季回顾
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="我的美食向导 第二季">
+            我的美食向导 第二季
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2026</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6ac9ba69b161a0f7373453aa-35907.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="Doctor X：白色黑手党时代" data-url="/movie/6ac9ba69b161a0f7373453aa/35907.html" data-cover="/movie/6ac9ba69b161a0f7373453aa-35907.html">
+        <img data-src="/img/id/6ac9ba69b161a0f7373453aa.jpg" alt="Doctor X：白色黑手党时代" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            第02集
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="Doctor X：白色黑手党时代">
+            Doctor X：白色黑手党时代
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2026</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6a41f47920027f7a4ba39204-50766.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="舍得智慧人物 第八季" data-url="/movie/6a41f47920027f7a4ba39204/50766.html" data-cover="/movie/6a41f47920027f7a4ba39204-50766.html">
+        <img data-src="/img/id/6a41f47920027f7a4ba39204.jpg" alt="舍得智慧人物 第八季" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            更新至第5集
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="舍得智慧人物 第八季">
+            舍得智慧人物 第八季
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2026</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6acafd8c791f12a038fefac1-37719.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="学警出击" data-url="/movie/6acafd8c791f12a038fefac1/37719.html" data-cover="/movie/6acafd8c791f12a038fefac1-37719.html">
+        <img data-src="/img/id/6acafd8c791f12a038fefac1.jpg" alt="学警出击" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            正片
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="学警出击">
+            学警出击
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2026</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6acaf6d3a60977bacab26a92-58693.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="布兰迪万河上的死亡" data-url="/movie/6acaf6d3a60977bacab26a92/58693.html" data-cover="/movie/6acaf6d3a60977bacab26a92-58693.html">
+        <img data-src="/img/id/6acaf6d3a60977bacab26a92.jpg" alt="布兰迪万河上的死亡" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            正片
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="布兰迪万河上的死亡">
+            布兰迪万河上的死亡
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2026</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6acaf609285d3174ef6216d9-18497.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="仆人" data-url="/movie/6acaf609285d3174ef6216d9/18497.html" data-cover="/movie/6acaf609285d3174ef6216d9-18497.html">
+        <img data-src="/img/id/6acaf609285d3174ef6216d9.jpg" alt="仆人" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            更新至HD
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="仆人">
+            仆人
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2026</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6acae820591185ac48c92100-87108.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="极恶兄弟追魂令" data-url="/movie/6acae820591185ac48c92100/87108.html" data-cover="/movie/6acae820591185ac48c92100-87108.html">
+        <img data-src="/img/id/6acae820591185ac48c92100.jpg" alt="极恶兄弟追魂令" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            HD中字
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="极恶兄弟追魂令">
+            极恶兄弟追魂令
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2025</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6acae820591185ac48c920fe-97700.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="血色冠军：我是你的避风港" data-url="/movie/6acae820591185ac48c920fe/97700.html" data-cover="/movie/6acae820591185ac48c920fe-97700.html">
+        <img data-src="/img/id/6acae820591185ac48c920fe.jpg" alt="血色冠军：我是你的避风港" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            HD中字
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="血色冠军：我是你的避风港">
+            血色冠军：我是你的避风港
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2025</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6acae26960eec17815e74c05-47625.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="红色赞美诗" data-url="/movie/6acae26960eec17815e74c05/47625.html" data-cover="/movie/6acae26960eec17815e74c05-47625.html">
+        <img data-src="/img/id/6acae26960eec17815e74c05.jpg" alt="红色赞美诗" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            1080p
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="红色赞美诗">
+            红色赞美诗
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>1972</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6ac8532e1f92e09131e36507-36658.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="人为何要写情书" data-url="/movie/6ac8532e1f92e09131e36507/36658.html" data-cover="/movie/6ac8532e1f92e09131e36507-36658.html">
+        <img data-src="/img/id/6ac8532e1f92e09131e36507.jpg" alt="人为何要写情书" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            HD
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="人为何要写情书">
+            人为何要写情书
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2026</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6acac9c1e165f18a07ca04b2-55183.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="挑战克林姆宫的声音" data-url="/movie/6acac9c1e165f18a07ca04b2/55183.html" data-cover="/movie/6acac9c1e165f18a07ca04b2-55183.html">
+        <img data-src="/img/id/6acac9c1e165f18a07ca04b2.jpg" alt="挑战克林姆宫的声音" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            HD中字
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="挑战克林姆宫的声音">
+            挑战克林姆宫的声音
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2025</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6acabb7560eec17815e74c04-55384.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="非电影" data-url="/movie/6acabb7560eec17815e74c04/55384.html" data-cover="/movie/6acabb7560eec17815e74c04-55384.html">
+        <img data-src="/img/id/6acabb7560eec17815e74c04.jpg" alt="非电影" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            1080p
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="非电影">
+            非电影
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2015</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6ac875ebb394e62a6324c0d7-91721.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="致命录像带：混音带" data-url="/movie/6ac875ebb394e62a6324c0d7/91721.html" data-cover="/movie/6ac875ebb394e62a6324c0d7-91721.html">
+        <img data-src="/img/id/6ac875ebb394e62a6324c0d7.jpg" alt="致命录像带：混音带" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            1080p
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="致命录像带：混音带">
+            致命录像带：混音带
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2026</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6aca364160eec17815e74c02-99215.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="പ്രഥമ ദൃഷ്ട്യാ കുറ്റക്കാർ" data-url="/movie/6aca364160eec17815e74c02/99215.html" data-cover="/movie/6aca364160eec17815e74c02-99215.html">
+        <img data-src="/img/id/6aca364160eec17815e74c02.jpg" alt="പ്രഥമ ദൃഷ്ട്യാ കുറ്റക്കാർ" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            1080p
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="പ്രഥമ ദൃഷ്ട്യാ കുറ്റക്കാർ">
+            പ്രഥമ ദൃഷ്ട്യാ കുറ്റക്കാർ
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2026</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6aca3be352c349f9448555ed-18909.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="巴黎绽放的星" data-url="/movie/6aca3be352c349f9448555ed/18909.html" data-cover="/movie/6aca3be352c349f9448555ed-18909.html">
+        <img data-src="/img/id/6aca3be352c349f9448555ed.jpg" alt="巴黎绽放的星" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            正片
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="巴黎绽放的星">
+            巴黎绽放的星
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2026</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+        
+<div class="group relative flex flex-col h-full">
+    <a href="/movie/6aca3a7457eac570f12af575-87818.html" class="block w-full aspect-[2/3] relative overflow-hidden rounded-lg bg-gray-100 shadow-sm group-hover:shadow-md transition-all duration-300" title="假面骑士零一真实×时间劇場版" data-url="/movie/6aca3a7457eac570f12af575/87818.html" data-cover="/movie/6aca3a7457eac570f12af575-87818.html">
+        <img data-src="/img/id/6aca3a7457eac570f12af575.jpg" alt="假面骑士零一真实×时间劇場版" class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+        
+        
+        
+        <div class="absolute top-2 right-2 bg-[#409EFF]/90 backdrop-blur-sm text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            正片
+        </div>
+        
+        
+        
+        
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+             <div class="w-10 h-10 bg-white/95 rounded-full flex items-center justify-center text-[#409EFF] shadow-lg transform scale-75 group-hover:scale-100 transition-transform">
+                <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+        </div>
+    </a>
+    
+    
+    <div class="mt-2.5 px-0.5 w-full flex-1 flex flex-col">
+        
+        <h3 class="font-medium text-sm text-gray-700 line-clamp-2 group-hover:text-[#409EFF] transition-colors mb-1" title="假面骑士零一真实×时间劇場版">
+            假面骑士零一真实×时间劇場版
+        </h3>
+        
+        
+        <div class="flex items-center justify-between text-xs text-gray-400 mt-auto w-full pt-2">
+            <span>2020</span>
+            
+            <span class="text-[#409EFF] bg-blue-50 px-1 py-0.5 rounded text-[10px] truncate">电影</span>
+            
+        </div>
+    </div>
+</div>
+        
+      </div>
+
+        
+        
+        
+        <section class="mt-8 mb-4">
+          <div class="flex justify-center items-center flex-wrap gap-1 text-xs">
+            
+            
+            <a href="/dianying.html?page=0" class="px-3 py-1.5 min-w-[32px] rounded font-normal transition-all duration-200
+              
+                bg-[#409EFF] text-white border border-[#409EFF]
+              ">
+              1
+            </a>
+            
+            <a href="/dianying.html?page=1" class="px-3 py-1.5 min-w-[32px] rounded font-normal transition-all duration-200
+              
+                bg-white border border-[#dcdfe6] text-[#606266] hover:text-[#409EFF] hover:border-[#409EFF]
+              ">
+              2
+            </a>
+            
+            <a href="/dianying.html?page=2" class="px-3 py-1.5 min-w-[32px] rounded font-normal transition-all duration-200
+              
+                bg-white border border-[#dcdfe6] text-[#606266] hover:text-[#409EFF] hover:border-[#409EFF]
+              ">
+              3
+            </a>
+            
+            <a href="/dianying.html?page=3" class="px-3 py-1.5 min-w-[32px] rounded font-normal transition-all duration-200
+              
+                bg-white border border-[#dcdfe6] text-[#606266] hover:text-[#409EFF] hover:border-[#409EFF]
+              ">
+              4
+            </a>
+            
+            <a href="/dianying.html?page=4" class="px-3 py-1.5 min-w-[32px] rounded font-normal transition-all duration-200
+              
+                bg-white border border-[#dcdfe6] text-[#606266] hover:text-[#409EFF] hover:border-[#409EFF]
+              ">
+              5
+            </a>
+            
+            
+            <a href="/dianying.html?page=3801" class="px-3 py-1.5 min-w-[32px] rounded font-normal transition-all duration-200 bg-white border border-[#dcdfe6] text-[#606266] hover:text-[#409EFF] hover:border-[#409EFF]">
+              3802
+            </a>
+            
+          </div>
+          
+          <div class="flex justify-center items-center mt-3 text-xs gap-1">
+            <span class="text-[#606266]">跳转到第</span>
+            <input type="number" id="page-jump" class="w-12 h-7 px-1 text-center border border-[#dcdfe6] rounded focus:outline-none focus:border-[#409EFF]" min="1" max="3802">
+            <span class="text-[#606266]">页</span>
+            <button onclick="jumpToPage()" class="px-3 py-1.5 ml-1 bg-white border border-[#dcdfe6] rounded text-[#606266] hover:text-[#409EFF] hover:border-[#409EFF] transition-all duration-200">确定</button>
+          </div>
+          <script>
+            function jumpToPage() {
+              const input = document.getElementById('page-jump');
+              if (!input) return;
+              let page = parseInt(input.value);
+              const maxPage = parseInt("3802");
+              
+              if (isNaN(page) || page < 1) return;
+              if (page > maxPage) page = maxPage;
+              
+              const url = new URL(window.location.href);
+              url.searchParams.set('page', page - 1);
+              window.location.href = url.toString();
+            }
+            
+            document.getElementById('page-jump')?.addEventListener('keypress', function(e) {
+              if (e.key === 'Enter') jumpToPage();
+            });
+          </script>
+        </section>
+        
+        
+    </section>
+            
+      
+
+  </main>
+
+  <footer class="bg-white pt-10 pb-6 border-t border-[#dcdfe6] mt-auto">
+    <div class="max-w-7xl mx-auto px-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+            
+            <div>
+                <div class="flex items-center gap-2 mb-4">
+                    <svg t="1758385642184" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="8016" width="32" height="32"><path d="M64 511.99984C64 264.584462 264.584462 64 511.99984 64 759.415218 64 959.99968 264.584462 959.99968 511.99984 959.99968 759.415218 759.415218 959.99968 511.99984 959.99968 264.584462 959.99968 64 759.415218 64 511.99984M414.843608 309.742846C386.052152 293.883651 362.66656 307.56258 362.66656 340.415901L362.66656 683.553912C362.66656 716.1683 386.022285 730.116029 414.843608 714.226968L729.070696 540.791296C757.802419 524.902235 757.862152 499.097445 729.070696 483.178517L414.843608 309.742846Z" p-id="8017" fill="#409EFF"></path></svg>
+                    <h2 class="text-lg font-bold text-[#303133]">TV仓</h2>
+                </div>
+                <p class="text-sm text-[#909399] leading-relaxed mb-4">
+                    TV仓致力于为用户提供高质量的在线视频服务，海量高清影视内容免费观看。
+                </p>
+            </div>
+
+
+        </div>
+
+        
+        <div class="border-t border-gray-100 pt-6">
+            <div class="hidden showad flex flex-wrap gap-4 justify-center mb-4 text-xs text-[#909399]">
+                <a href="https://dyrs8.net/" class="hover:text-[#409EFF]">电影人生</a>
+                <a href="https://kingtv.vip/" class="hover:text-[#409EFF]">kingtv</a>
+                
+                <p class="">
+                    TG:@dyrsvip
+                </p>
+                
+                 <div class="sr-only">
+                    
+                 </div>
+            </div>
+            
+           
+            <p class="text-center text-xs text-[#C0C4CC]">
+                &copy; 2026 TV仓. All rights reserved. 本站所有内容均来自互联网分享站点所提供的公开引用资源，未提供影视资源上传、存储服务。
+            </p>
+        </div>
+    </div>
+</footer>
+
+
+ <div id="qrCodeWidget" class="fixed bottom-24 right-4 bg-white rounded-lg shadow-lg p-3 z-40 border border-gray-200 hidden transition-all duration-300 hover:shadow-xl">
+     <div class="text-center">
+         <div class="text-xs text-gray-600 mb-2">扫码访问手机端</div>
+         <img id="qrCodeImage" src="" alt="二维码" class="w-24 h-24 mx-auto rounded border border-gray-100">
+     </div>
+ </div>
+  
+ <style>
+      
+     #qrCodeWidget {
+          
+         display: none;
+     }
+      
+     @media (min-width: 1152px) {
+         #qrCodeWidget:not(.hidden) {
+             display: block;
+         }
+     }
+      
+      
+     #qrCodeImage {
+         transition: opacity 0.3s ease;
+     }
+      
+     #qrCodeImage:not([src]), #qrCodeImage[src=""] {
+         opacity: 0.5;
+         background: linear-gradient(45deg, #f0f0f0 25%, transparent 25%), 
+                     linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), 
+                     linear-gradient(45deg, transparent 75%, #f0f0f0 75%), 
+                     linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+         background-size: 8px 8px;
+         background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+     }
+ </style>
+  
+ 
+ <button id="backToTop" class="fixed bottom-10 right-10 bg-white text-blue-500 rounded-full p-2 shadow-sm opacity-0 z-50 border border-gray-100 transition-opacity duration-300">
+     <svg t="1768320709361" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="8092" width="32" height="32"><path d="M372.306898 792.431381v45.303732H296.992643v185.950064h-46.775464v-186.014052H176.95055v-45.303732H372.306898z m377.851042-1.279766c38.392993 0 100.909584 20.796205 98.478028 81.073204-2.30358 57.58949-55.925794 74.098477-94.638729 75.378243h-38.201028v76.082115H670.492479v-232.59755h79.729449z m-240.020196 0a116.522735 116.522735 0 1 1 0 232.661539 114.283143 114.283143 0 0 1-85.296434-31.418266 115.56291 115.56291 0 0 1-30.970348-84.848515 115.690886 115.690886 0 0 1 30.970348-85.168457 114.475108 114.475108 0 0 1 85.296434-31.290289z m0 46.51951a69.299353 69.299353 0 0 0-52.27846 17.468812 70.387154 70.387154 0 0 0-17.468812 52.406436 69.939236 69.939236 0 0 0 17.596789 52.150482 68.787446 68.787446 0 0 0 52.150483 17.596789 70.387154 70.387154 0 0 0 52.406435-17.596789 69.619294 69.619294 0 0 0 17.468812-52.278459 69.875248 69.875248 0 0 0-17.468812-52.406436 69.683283 69.683283 0 0 0-52.342447-17.468812z m206.874245 0v63.540404h31.994161c33.017974 0 52.598401-11.197956 53.302272-30.842371 0.703872-17.084882-18.620602-30.586418-45.623673-32.378091h-39.608772zM481.982882 7.550622a25.595329 25.595329 0 0 1 36.281378 0l367.420946 367.420946a25.595329 25.595329 0 0 1-17.852742 43.576047H691.736602a25.595329 25.595329 0 0 0-25.595329 25.595329v274.445914a25.595329 25.595329 0 0 1-25.595329 25.595328h-275.149785a25.595329 25.595329 0 0 1-25.595329-25.595328V444.206932a25.595329 25.595329 0 0 0-25.595329-25.595329H156.090357a25.595329 25.595329 0 0 1-18.428637-43.576047z" p-id="8093" fill="#409EFF"></path></svg>
+ </button>
+
+
+
+<script>
+    let isSearch=false;
+    if(typeof isSearchEngineBot==='function'){
+        isSearch=isSearchEngineBot();
+    }
+    
+    class QRCodeWidget {
+         constructor() {
+             this.widget = document.getElementById('qrCodeWidget');
+             this.qrImage = document.getElementById('qrCodeImage');
+             this.init();
+         }
+  
+         init() {
+             
+             this.checkScreenWidth();
+              
+             
+             window.addEventListener('resize', () => {
+                 this.checkScreenWidth();
+             });
+  
+             
+             if(!isSearch){
+                this.generateQRCode();
+             }
+         }
+  
+         checkScreenWidth() {
+             
+             if (window.innerWidth >= 1152) {
+                 this.widget.classList.remove('hidden');
+             } else {
+                 this.widget.classList.add('hidden');
+             }
+         }
+  
+         generateQRCode() {
+             
+             const currentUrl = window.location.href;
+              
+             
+             const qrCodeUrl = `/api/qrcode?url=${encodeURIComponent(currentUrl)}`;
+              
+             
+             if(this.qrImage) {
+                 this.qrImage.src = qrCodeUrl;
+             }
+         }
+     }
+
+    
+    function footerfunc(){
+          const qrImage = document.getElementById('footerQrCode');
+        if (qrImage && !isSearch) {
+            const currentUrl = window.location.origin + '/app.html';
+            qrImage.src = `/api/qrcode?url=${encodeURIComponent(currentUrl)}`;
+            qrImage.onload = function() {
+                this.classList.remove('opacity-50');
+            }
+        }
+        
+        
+        new QRCodeWidget();
+
+        
+        initLazyLoad();
+        
+        
+        initBackToTop();
+            
+        
+        if(!isSearch){
+            try{
+                fetch('/api/app/version')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data && data.url) {
+                            data.url="/pub.html"
+                            const pcBtn = document.getElementById('pc-app-download');
+                            const mobileBtn = document.getElementById('mobile-app-download');
+                            
+                            if (pcBtn) {
+                                pcBtn.href = data.url;
+                                if (data.text) {
+                                    pcBtn.setAttribute('title', data.text);
+                                }
+                            }
+                            const app_link=document.getElementById('app_link');
+                            if (mobileBtn) {
+                                mobileBtn.href = data.url;
+                            }
+                            if(app_link){
+                            app_link.href = data.url;
+                            }
+                        }
+                    })
+                    .catch(err => console.error('Failed to fetch app version', err));
+                }catch(err){
+                console.error('Failed to fetch app version', err);
+                }
+        }
+    }
+
+
+    
+    function initBackToTop() {
+        const backToTopButton = document.getElementById('backToTop');
+        if(!backToTopButton) return;
+        
+        
+        window.addEventListener('scroll', function() {
+            if (window.pageYOffset > 200) {
+                backToTopButton.classList.remove('opacity-0');
+                backToTopButton.classList.add('opacity-100');
+            } else {
+                backToTopButton.classList.remove('opacity-100');
+                backToTopButton.classList.add('opacity-0');
+            }
+        });
+        
+        
+        backToTopButton.addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+
+    
+    function initLazyLoad() {
+        try{
+            if ('IntersectionObserver' in window) {
+            var lazyImageObserver = new IntersectionObserver(function(entries, observer) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        var lazyImage = entry.target;
+                        if (lazyImage.dataset.src) {
+                            if(lazyImage.dataset.src.startsWith("/") && typeof dyrs_api_origin === 'string' &&dyrs_api_origin.startsWith("http")){
+                                const r=lazyImage.src;
+                                lazyImage.src = dyrs_api_origin + lazyImage.dataset.src;
+                                lazyImage.onerror = function() {
+                                 if(this.src!==r){
+                                     this.src=r;
+                                 }
+                                };
+                            }else{
+                                lazyImage.src = lazyImage.dataset.src;
+                            }
+                            lazyImage.classList.remove("lazy-image");
+                            lazyImageObserver.unobserve(lazyImage);
+                        }
+                    }
+                });
+            });
+
+            var lazyImages = document.querySelectorAll("img.lazy-image");
+            lazyImages.forEach(function(lazyImage) {
+                lazyImageObserver.observe(lazyImage);
+            });
+        } else {
+            
+            var lazyImages = document.querySelectorAll("img.lazy-image");
+            lazyImages.forEach(function(lazyImage) {
+                if (lazyImage.dataset.src) {
+                    lazyImage.src = lazyImage.dataset.src;
+                }
+            });
+        }
+        }catch(err){
+            var lazyImages = document.querySelectorAll("img.lazy-image");
+            lazyImages.forEach(function(lazyImage) {
+                if (lazyImage.dataset.src) {
+                    lazyImage.src = lazyImage.dataset.src;
+                }
+            });
+        }
+    }
+
+     if (document.readyState === 'loading') {
+          
+          document.addEventListener('DOMContentLoaded', footerfunc);
+      } else {
+          
+          footerfunc();
+      }
+
+</script>
+
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      
+      function scrollToActiveFilter() {
+        
+        if (window.innerWidth >= 768) return;
+
+        const activeFilters = document.querySelectorAll('.bg-\\[\\#409EFF\\].text-white');
+        activeFilters.forEach(filter => {
+          const container = filter.closest('.overflow-x-auto');
+          if (container) {
+            
+            const containerWidth = container.offsetWidth;
+            const filterLeft = filter.offsetLeft - container.offsetLeft; 
+            const filterWidth = filter.offsetWidth;
+            
+            
+            
+            const padding = 20; 
+            const scrollLeft = filterLeft - (containerWidth / 2) + (filterWidth / 2);
+            
+            container.scrollTo({
+              left: scrollLeft,
+              behavior: 'smooth'
+            });
+          }
+        });
+      }
+      
+      scrollToActiveFilter();
+    });
+  </script>
+</body>
+</html>

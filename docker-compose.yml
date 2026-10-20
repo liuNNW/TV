@@ -1,0 +1,18 @@
+services:
+  movie-player:
+    build: .
+    image: movie-player:latest
+    container_name: movie-player
+    restart: unless-stopped
+    ports:
+      - "8848:8848"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8848
+      # 收藏/历史存到 NAS 磁盘，重建容器不丢数据
+      - DATA_DIR=/app/data
+    volumes:
+      - ./data:/app/data
+    # 保留注释掉的写法：如果不想暴露到局域网，改绑回环
+    # ports:
+    #   - "127.0.0.1:8848:8848"

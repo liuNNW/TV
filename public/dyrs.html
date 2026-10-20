@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>影视仓 - 影视播放站</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<style>
+/* 影视仓专用样式，统一 dw- 前缀，不动 style.css 里的既有类 */
+.dw-filter {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.dw-filter:last-child { border-bottom: none; margin-bottom: 12px; }
+.dw-filter-label {
+  color: var(--text-dim);
+  font-size: 13px;
+  min-width: 3rem;
+  padding: 4px 0;
+  flex-shrink: 0;
+}
+.dw-filter a {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 13px;
+}
+.dw-filter a:hover { background: var(--bg-3); color: var(--text); }
+.dw-filter a.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="section-title">
+    <h2 id="headTitle">影视仓</h2>
+    <span id="hint" class="badge"></span>
+  </div>
+
+  <div class="lines" id="catBox" style="margin-bottom:12px"></div>
+  <div id="filterBox"></div>
+
+  <div id="content">
+    <div class="state"><span class="spinner"></span> 加载中…</div>
+  </div>
+  <div id="pager" class="pager"></div>
+</main>
+
+<script src="app.js"></script>
+<script>
+/* 影视仓（dyrs）浏览页：首页推荐 / 分类列表 / 搜索。
+ * 点卡片进 dyrs-detail.html，点选集才跳老播放页 play.html（复用同一套播放器）。 */
+
+window.__searchBase = 'dyrs.html?wd=';
+
+const params = new URLSearchParams(location.search);
+const wd = params.get('wd') || '';
+let channel = params.get('ch') || '';
+let page = Math.max(0, Number(params.get('page')) || 0);
+
+mountTopbar('dyrs.html');
+
+const CHANNELS = [
+  ['dianying', '电影'],
+  ['dianshiju', '电视剧'],
+  ['zongyi', '综艺'],
+  ['dongman', '动漫'],
+  ['duanju', '短剧'],
+];
+
+const content = document.getElementById('content');
+const pager = document.getElementById('pager');
+const catBox = document.getElementById('catBox');
+const filterBox = document.getElementById('filterBox');
+const headTitle = document.getElementById('headTitle');
+const hint = document.getElementById('hint');
+
+/** 渲染令牌：防止慢请求回来覆盖新内容 */
+let renderToken = 0;
+
+/* ---------------- 渲染 ---------------- */
+
+/** 封面统一走站内图片代理（上游要 Referer，还带反爬校验，浏览器直连必 403） */
+function coverUrl(item) {
+  if (item.id) return `${API}/dyrs/site/img?id=${encodeURIComponent(item.id)}`;
+  if (item.pic) return `${API}/dyrs/site/img?u=${encodeURIComponent(item.pic)}`;
+  return '';
+}
+
+function detailHrefOf(item) {
+  const p = new URLSearchParams({ id: item.id, kind: item.kind || 'tv', ep: item.ep || '1' });
+  if (item.name) p.set('name', item.name);
+  return `dyrs-detail.html?${p.toString()}`;
+}
+
+function renderCard(item) {
+  const pic = coverUrl(item);
+  const poster = pic
+    ? `<img class="poster" src="${esc(pic)}" alt="${esc(item.name)}" loading="lazy">`
+    : `<div class="poster-ph">${esc(item.name)}</div>`;
+
+  const bits = [];
+  if (item.year) bits.push(esc(item.year));
+  if (item.cat) bits.push(esc(item.cat));
+  if (item.remark) bits.push(esc(item.remark));
+
+  const score = item.score && Number(item.score) > 0
+    ? `<span class="badge score">${esc(item.score)}</span>`
+    : '';
+
+  return `
+    <div class="card" onclick="location.href='${detailHrefOf(item)}'">
+      ${poster}
+      <div class="meta">
+        <div class="title" title="${esc(item.name)}">${esc(item.name)}</div>
+        <div class="sub">${score}${bits.join(' · ')}</div>
+      </div>
+    </div>`;
+}
+
+function renderCatRow() {
+  catBox.innerHTML = CHANNELS.map(([c, n]) => {
+    const active = c === channel ? ' active' : '';
+    return `<button class="${active}" onclick="goChannel('${c}')">${n}</button>`;
+  }).join('');
+}
+
+/** 上游筛选行的 href（/dianying.html?class=..）→ 本站影视仓地址 */
+function filterHref(href) {
+  try {
+    const u = new URL(href, location.origin);
+    const ch = (u.pathname.match(/^\/([a-z]+)\.html$/) || [])[1] || channel;
+    const q = new URLSearchParams(u.search);
+    q.delete('page');
+    q.set('ch', ch);
+    return `dyrs.html?${q.toString()}`;
+  } catch {
+    return `dyrs.html?ch=${encodeURIComponent(channel)}`;
+  }
+}
+
+/** 当前选中的筛选项（只对「带参数」的选项高亮，避免整行都亮） */
+function isActiveFilter(href) {
+  try {
+    const u = new URL(href, location.origin);
+    let any = false;
+    for (const k of ['class', 'area', 'year', 'sort_field']) {
+      const want = u.searchParams.get(k);
+      const have = params.get(k);
+      if ((want || '') !== (have || '')) return false;
+      if (want) any = true;
+    }
+    return any;
+  } catch {
+    return false;
+  }
+}
+
+function renderFilters(filters) {
+  if (!filters || filters.length === 0) { filterBox.innerHTML = ''; return; }
+  filterBox.innerHTML = filters.map((row) => {
+    const opts = (row.options || []).map((o) => {
+      const href = filterHref(o.href);
+      const active = isActiveFilter(o.href) ? ' class="active"' : '';
+      return `<a href="${esc(href)}"${active}>${esc(o.text)}</a>`;
+    }).join('');
+    return `<div class="dw-filter"><span class="dw-filter-label">${esc(row.label)}</span>${opts}</div>`;
+  }).join('');
+}
+
+function renderPager(p, mx) {
+  if (mx <= 0) { pager.innerHTML = ''; return; }
+  pager.innerHTML = `
+    <button ${p <= 0 ? 'disabled' : ''} onclick="goPage(${p - 1})">上一页</button>
+    <span class="info">第 ${p + 1} / ${mx + 1} 页</span>
+    <button ${p >= mx ? 'disabled' : ''} onclick="goPage(${p + 1})">下一页</button>
+    <button onclick="goPage(0)">首页</button>`;
+}
+
+/* ---------------- 数据 ---------------- */
+
+async function load() {
+  filterBox.innerHTML = '';
+  pager.innerHTML = '';
+  renderCatRow();
+  const token = ++renderToken;
+  content.innerHTML = '<div class="state"><span class="spinner"></span> 加载中…</div>';
+
+  try {
+    /* 搜索 */
+    if (wd) {
+      headTitle.textContent = `影视仓 · 搜索“${wd}”`;
+      hint.textContent = '';
+      const r = await api(`/dyrs/site/search?wd=${encodeURIComponent(wd)}`);
+      if (token !== renderToken) return;
+      const cards = r.cards || [];
+      hint.textContent = `命中 ${cards.length} 条`;
+      content.innerHTML = cards.length
+        ? `<div class="grid">${cards.map(renderCard).join('')}</div>`
+        : `<div class="state"><div class="big">🔍</div>影视仓里没有找到「${esc(wd)}」</div>`;
+      return;
+    }
+
+    /* 分类列表 */
+    if (channel) {
+      const name = (CHANNELS.find((c) => c[0] === channel) || ['', channel])[1];
+      headTitle.textContent = `影视仓 · ${name}`;
+      const q = new URLSearchParams();
+      for (const k of ['class', 'area', 'year', 'sort_field']) {
+        const v = params.get(k);
+        if (v) q.set(k, v);
+      }
+      q.set('ch', channel);
+      q.set('page', String(page));
+
+      const r = await api(`/dyrs/site/list?${q.toString()}`);
+      if (token !== renderToken) return;
+
+      const cards = r.cards || [];
+      hint.textContent = `第 ${r.page + 1} / ${r.maxPage + 1} 页`;
+      renderFilters(r.filters);
+      content.innerHTML = cards.length
+        ? `<div class="grid">${cards.map(renderCard).join('')}</div>`
+        : '<div class="state">这一页没有内容</div>';
+      renderPager(r.page, r.maxPage);
+      return;
+    }
+
+    /* 首页推荐 */
+    headTitle.textContent = '影视仓';
+    hint.textContent = '';
+    const r = await api('/dyrs/site/home');
+    if (token !== renderToken) return;
+
+    let html = '';
+    const banner = (r.banner || []).slice(0, 10);
+    if (banner.length) {
+      html += `<div class="section-title"><h2>正在热播</h2></div>`
+        + `<div class="grid">${banner.map((b) => renderCard({
+            id: b.id, kind: b.kind, ep: b.ep, name: b.name, pic: b.pic, remark: b.remark,
+          })).join('')}</div>`;
+    }
+
+    for (const s of (r.strips || [])) {
+      if (!s.cards || s.cards.length === 0) continue;
+      html += `<div class="section-title"><h2>${esc(s.name)}</h2>`
+        + `<button style="margin-left:auto" onclick="goChannel('${s.channel}')">更多 ›</button></div>`
+        + `<div class="grid">${s.cards.map(renderCard).join('')}</div>`;
+    }
+
+    content.innerHTML = html || '<div class="state">影视仓暂时没有返回内容</div>';
+  } catch (e) {
+    if (token !== renderToken) return;
+    content.innerHTML = `<div class="state"><div class="big">⚠️</div>${esc(e.message)}
+      <div style="margin-top:12px"><button class="primary" onclick="load()">重试</button></div></div>`;
+  }
+}
+
+function goChannel(c) {
+  location.href = `dyrs.html?ch=${encodeURIComponent(c)}`;
+}
+
+function goPage(n) {
+  if (n < 0) return;
+  const q = new URLSearchParams();
+  for (const k of ['class', 'area', 'year', 'sort_field']) {
+    const v = params.get(k);
+    if (v) q.set(k, v);
+  }
+  q.set('ch', channel);
+  q.set('page', String(n));
+  location.href = `dyrs.html?${q.toString()}`;
+}
+
+load();
+</script>
+</body>
+</html>

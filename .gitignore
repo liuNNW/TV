@@ -1,0 +1,31 @@
+# 依赖
+node_modules/
+
+# PM2 运行产物
+.pm2/
+
+# 一键更新的 npm 缓存（updater 用 --cache 指到项目内，绕开 ~/.npm 的权限问题）
+.npm-cache/
+
+# 用户数据与运行产物（NAS 上不能被 git 覆盖更新碰到）
+data/
+videos/
+run.log
+*.pid
+*.log
+.DS_Store
+media/
+movies/
+影片/
+电影/
+
+# 本地/私有内容
+NAS运行包/
+*.zip
+.workbuddy/
+
+# 测试临时目录（Windows 上 vitest 会被沙箱挡 TMPDIR，指向项目内目录跑）
+.vitest-tmp*/
+
+# 注意：vendor 的 hls.min.js / mpegts.js 必须提交进仓库，
+# NAS 上的一键更新用 git 覆盖代码，仓库里没有这两个文件播放就挂了

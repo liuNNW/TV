@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>影视仓详情 - 影视播放站</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="wrap">
+  <div id="content">
+    <div class="state"><span class="spinner"></span> 加载中…</div>
+  </div>
+</main>
+
+<script src="app.js"></script>
+<script>
+/* 影视仓详情页。
+ * 数据来自 /api/dyrs/site/detail（服务端逐条线路抓镜像站、按「真实 m3u8 优先」排好序），
+ * 选集时跳**老的** play.html，带 source=dyrs，由 player.js 走影视仓分支取流。 */
+
+window.__searchBase = 'dyrs.html?wd=';
+
+const params = new URLSearchParams(location.search);
+const vid = params.get('id') || '';
+const kind = params.get('kind') || 'tv';
+let originIndex = Math.max(0, Number(params.get('line')) || 0);
+
+mountTopbar('dyrs.html');
+
+let detail = null;
+/** 服务器已经保证每条线路都有选集，这里再兜一层（空线路选了也播不了） */
+let origList = [];
+/** 选集块编号：播放页地址是 /{kind}/{id}/{seq}.html?origin=..&p=.. */
+let seq = '1';
+
+/* extra 里已经用信息行单独展示过的字段，别再重复一遍 */
+const DUP_KEYS = ['地区', '语言', '类型', '年份', '评分', '状态'];
+
+async function load() {
+  const box = document.getElementById('content');
+  if (!vid) { box.innerHTML = '<div class="state">缺少片目参数</div>'; return; }
+
+  try {
+    const r = await api(`/dyrs/site/detail?id=${encodeURIComponent(vid)}&kind=${encodeURIComponent(kind)}&ep=1`);
+    detail = r.detail;
+    if (!detail) throw new Error('影视仓没有返回详情');
+
+    seq = detail.seq || '1';
+    origList = (detail.origins || []).filter((o) => o.episodes && o.episodes.length > 0);
+    if (origList.length === 0) {
+      box.innerHTML = '<div class="err">这一部在影视仓里还没有可用的片源线路。</div>';
+      return;
+    }
+    originIndex = Math.min(originIndex, origList.length - 1);
+    render();
+  } catch (e) {
+    box.innerHTML = `<div class="state"><div class="big">⚠️</div>${esc(e.message)}
+      <div style="margin-top:12px"><button class="primary" onclick="load()">重试</button></div></div>`;
+  }
+}
+
+function posterSrc() {
+  return `${API}/dyrs/site/img?id=${encodeURIComponent(detail.id)}`;
+}
+
+function render() {
+  document.title = `${detail.name} - 影视仓`;
+  const box = document.getElementById('content');
+  const o = origList[originIndex];
+
+  const infoRows = [];
+  if (detail.year) infoRows.push(`<b>年份</b> ${esc(detail.year)}`);
+  if (detail.area) infoRows.push(`<b>地区</b> ${esc(detail.area)}`);
+  if (detail.language) infoRows.push(`<b>语言</b> ${esc(detail.language)}`);
+  if (detail.genre && detail.genre.length) infoRows.push(`<b>类型</b> ${esc(detail.genre.join(' / '))}`);
+  if (detail.score && Number(detail.score) > 0) infoRows.push(`<b>评分</b> ${esc(detail.score)}`);
+  for (const [k, v] of Object.entries(detail.extra || {})) {
+    if (DUP_KEYS.includes(k)) continue;
+    infoRows.push(`<b>${esc(k)}</b> ${esc(v)}`);
+  }
+
+  box.innerHTML = `
+    <div class="detail-head">
+      <div class="poster-lg"><img src="${esc(posterSrc())}" alt="" onerror="this.style.display='none'"></div>
+      <div class="detail-info">
+        <h1>${esc(detail.name)}</h1>
+        ${detail.alias ? `<div class="row">别名：${esc(detail.alias)}</div>` : ''}
+        ${infoRows.map((r) => `<div class="row">${r}</div>`).join('')}
+        ${detail.director ? `<div class="row"><b>导演</b> ${esc(detail.director)}</div>` : ''}
+        ${detail.actors && detail.actors.length ? `<div class="row"><b>主演</b> ${esc(detail.actors.slice(0, 8).join(' / '))}</div>` : ''}
+        <div class="row"><b>片源</b> 影视仓 · ${esc(o.origin)}（共 ${o.episodes.length} 集）</div>
+        ${detail.description ? `<div class="plot" id="plot">${esc(detail.description)}</div>
+          <div style="margin-top:6px"><button onclick="document.getElementById('plot').classList.toggle('expanded')">展开/收起简介</button></div>` : ''}
+        <div class="actions">
+          <button class="primary" onclick="play(0)">▶ 播放第一集</button>
+          <button onclick="location.href='dyrs.html'">‹ 回影视仓</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title"><h2>选线路 / 选集</h2></div>
+    <div class="lines" id="lineBox"></div>
+    <div class="episodes" id="epBox"></div>`;
+
+  renderLines();
+  renderEpisodes();
+}
+
+function renderLines() {
+  document.getElementById('lineBox').innerHTML = origList.map((o, i) => {
+    const active = i === originIndex ? ' active' : '';
+    return `<button class="${active}" onclick="pickLine(${i})" title="${esc(o.origin)}">线路 ${i + 1} · ${esc(o.origin)} (${o.episodes.length})</button>`;
+  }).join('');
+}
+
+function pickLine(i) {
+  originIndex = i;
+  renderLines();
+  renderEpisodes();
+}
+
+function renderEpisodes() {
+  const o = origList[originIndex];
+  document.getElementById('epBox').innerHTML = o.episodes.map((e, i) => {
+    const label = e.title || `第 ${e.p + 1} 集`;
+    return `<div class="ep" onclick="play(${i})" title="${esc(label)}">${esc(label)}</div>`;
+  }).join('');
+}
+
+function play(i) {
+  const o = origList[originIndex];
+  const e = o.episodes[i];
+  if (!e) return;
+  // origin / p 按**值**传（重取详情时用），line / ep 按**索引**传（刷新后立刻有位）
+  const p = new URLSearchParams({
+    id: detail.id,
+    source: 'dyrs',
+    kind,
+    seq,
+    name: detail.name,
+    origin: e.origin || o.origin,
+    p: String(e.p),
+    line: String(originIndex),
+    ep: String(i),
+  });
+  p.set('pic', posterSrc());
+  location.href = `play.html?${p.toString()}`;
+}
+
+load();
+</script>
+</body>
+</html>
