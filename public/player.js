@@ -53,12 +53,15 @@ let ui = null;          // 自绘播放器 UI 句柄
  * 采集站的 CDN 常校验 Referer、或压根不开 CORS，浏览器直连分片就是取不到。
  * 一旦确认必须走代理，就在本次会话里记住，后面换集直接走代理，
  * 不再每集都重试直连、也不再反复弹「直连失败」的提示。
+ *
+ * 键名带 v2：旧版默认走 /api/hls，曾经把 mpProxySticky 记成 1；
+ * 现在默认改为客户端直连，必须让旧记忆失效，否则用户会一直卡在代理链路上。
  */
 let proxySticky = false;
-try { proxySticky = sessionStorage.getItem('mpProxySticky') === '1'; } catch { /* 隐私模式 */ }
+try { proxySticky = sessionStorage.getItem('mpProxyStickyV2') === '1'; } catch { /* 隐私模式 */ }
 function setProxySticky(v) {
   proxySticky = v;
-  try { sessionStorage.setItem('mpProxySticky', v ? '1' : '0'); } catch { /* ignore */ }
+  try { sessionStorage.setItem('mpProxyStickyV2', v ? '1' : '0'); } catch { /* ignore */ }
 }
 /** 本集「媒体错误原地恢复」已用次数：换代理解决不了解码/缓冲问题，先 recover 再说 */
 let mediaRecoverTries = 0;
@@ -380,7 +383,16 @@ function buildSrc(url, viaProxy) {
     const ref = refererFor(url);
     return `${API}/proxy?url=${encodeURIComponent(url)}${ref ? `&ref=${encodeURIComponent(ref)}` : ''}`;
   }
-  // 首选：后端广告过滤播放列表（正片分片仍直连 CDN）
+
+  // 客户端直连：采集站 CDN 本身返回 Access-Control-Allow-Origin: *，
+  // 让浏览器直接向 CDN 取 master/media 列表与分片，完全不经过服务器。
+  // 这样不会再因为「服务器出口 IP 被 CDN 拒绝 / 服务器到 CDN 不通」而 404。
+  //
+  // HTTP 源不能直连：本站是 HTTPS 页面，浏览器会按混合内容拦截，
+  // 这类地址仍然交给服务端 /api/hls 取回后以 HTTPS 同源输出。
+  if (/^https:\/\//i.test(url)) return url;
+
+  // 兜底：HTTP 源走服务端广告过滤播放列表
   const ref = refererFor(url);
   return `${API}/hls?url=${encodeURIComponent(url)}${ref ? `&ref=${encodeURIComponent(ref)}` : ''}`;
 }
