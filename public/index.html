@@ -94,7 +94,11 @@ async function renderCategories() {
     catBox.innerHTML = ch.categories
       .map((c) => {
         const active = c.name === catName ? ' active' : '';
-        return `<button class="${active}" onclick="pickCat('${esc(c.name)}')">${esc(c.name)} <span style="opacity:.6">${c.total}</span></button>`;
+        // 条数默认不采集（要额外 128 次上游请求），没有就不显示，别渲染出 undefined
+        const num = typeof c.total === 'number' && c.total > 0
+          ? ` <span style="opacity:.6">${c.total}</span>`
+          : '';
+        return `<button class="${active}" onclick="pickCat('${esc(c.name)}')">${esc(c.name)}${num}</button>`;
       })
       .join('');
 

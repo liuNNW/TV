@@ -304,29 +304,111 @@ export async function health(src) {
     }
 }
 /**
+ * 一次请求拿到源的**完整分类树**。
+ *
+ * 这是本模块最重要的一步简化：以前靠 `t=1..40` 逐个探测（8 源 320 次请求 / 57.8 秒），
+ * 而且 id > 40 的分类直接漏掉 —— lziapi 的「短剧」(46, 2.4 万部)、「AI漫剧」(52, 1.4 万部)
+ * 就是这么丢的。`ac=list` 的响应里本来就带 `class` 字段，一次就够。
+ *
+ * 注意：`type_pid` 不是所有源都有（实测 hongniu / sdzy 只给 id + name），
+ * 缺失时 `parent` 为 null，上层退回按名字规则归类。
+ */
+export async function fetchClassTree(src) {
+    const url = buildUrl(src.base, { ac: 'list' });
+    // 0 次重试 + 5s：这一步只是拿元数据。
+    // 实测 tyyszy 稳定要 8~10s（它自己能 200，但慢到没法用来浏览分类），
+    // 5s 把它挡在外面；超时不会写缓存，下次刷新只补它一个，不再拖累整批。
+    const data = await fetchJson(url, src.id, 0, 5000);
+    const rows = Array.isArray(data.class) ? data.class : [];
+    if (rows.length === 0)
+        return [];
+    const byId = new Map();
+    for (const r of rows) {
+        const id = String(r?.type_id ?? '').trim();
+        const name = String(r?.type_name ?? '').trim();
+        if (id && name)
+            byId.set(id, name);
+    }
+    const nodes = [];
+    const seen = new Set();
+    for (const r of rows) {
+        const id = String(r?.type_id ?? '').trim();
+        const name = String(r?.type_name ?? '').trim();
+        if (!id || !name || seen.has(id))
+            continue;
+        seen.add(id);
+        const rawPid = r?.type_pid === undefined || r?.type_pid === null ? '' : String(r.type_pid).trim();
+        // pid 指向自己不合法，指向不存在的父也当顶层
+        const parent = rawPid && rawPid !== '0' && rawPid !== id ? (byId.get(rawPid) ?? null) : null;
+        nodes.push({ id, name, parent });
+    }
+    return nodes;
+}
+/** 按 id 批量取条数（并发 6）。只有 `?counts=1` 才会用到。 */
+export async function fetchCategoryCounts(src, ids) {
+    const out = new Map();
+    const CONCURRENCY = 6;
+    const queue = [...new Set(ids.filter(Boolean))];
+    let cursor = 0;
+    const workers = Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
+        for (;;) {
+            const i = cursor++;
+            if (i >= queue.length)
+                return;
+            const t = queue[i];
+            try {
+                const url = buildUrl(src.base, { ac: 'list', t, pg: 1 });
+                const data = await fetchJson(url, src.id, 0);
+                const n = Number(data.total);
+                if (Number.isFinite(n) && n >= 0)
+                    out.set(t, n);
+            }
+            catch {
+                // 单个分类取不到就跳过，不影响其它
+            }
+        }
+    });
+    await Promise.all(workers);
+    return out;
+}
+/**
  * 探测某个源的分类列表。
  *
- * 各源的分类 id 完全不同（同一个 t=1 在 A 站是只有 1 部的「电影片」，
- * 在 B 站又是别的），所以不能硬编码，必须探测出来。
+ * 优先用 `class` 树（1 次请求、含层级、不漏 id）。
+ * 只有「源正常应答但没给 class」才退回逐个探测（说明它是活的，逐个问是安全的）。
  *
- * 做法：并发探测候选 id，按返回的 type_name 归并，同名取条数最多的那个 id。
- * 用 ac=list 而不是 ac=detail —— 探测只需要 type_name 和 total，
- * 而 ac=detail 在剧集分类上要 33 秒，探测 40 个分类会慢到不可用。
+ * **`class` 请求本身失败时直接抛错**（不再吞掉返回空数组）：
+ * 上层要据此区分「这个源这次没采到」和「这个源没有分类」，
+ * 前者不该被缓存 6 小时 —— 一次抖动就让某个源的分类消失半天。
  */
 export async function discoverCategories(src) {
-    const candidates = Array.from({ length: 40 }, (_, i) => i + 1);
-    // 并发限 6，并留出间隔，避免把采集站打出限流
-    const CONCURRENCY = 6;
+    const nodes = await fetchClassTree(src);
+    if (nodes.length > 0) {
+        return nodes.map((n) => ({ id: n.id, name: n.name, total: null, parent: n.parent }));
+    }
+    return probeCategories(src, 80);
+}
+/**
+ * 兜底：逐个 id 探测（只在源不返回 `class` 时使用）。
+ *
+ * 各源的分类 id 完全不同，所以不能硬编码，只能问。
+ * 用 ac=list 而不是 ac=detail —— 探测只需要 type_name 和 total，
+ * 而 ac=detail 在剧集分类上要 33 秒。
+ */
+async function probeCategories(src, maxId) {
+    const candidates = Array.from({ length: maxId }, (_, i) => i + 1);
+    const CONCURRENCY = 8;
     const results = [];
-    // 死源早退：前两批（12 个 id）全部失败说明这个源基本挂了，
-    // 没必要把剩下 28 个超时也傻等完（最坏 8s × 5 批 ≈ 半分钟）
     let leadingFailures = 0;
+    // 总预算：80 个 id × 6s 超时最坏能拖到一分钟，必须设上限，到点就收摊
+    const deadline = Date.now() + 15_000;
     for (let i = 0; i < candidates.length; i += CONCURRENCY) {
+        if (Date.now() > deadline)
+            break;
         const chunk = candidates.slice(i, i + CONCURRENCY);
         const settled = await Promise.allSettled(chunk.map(async (t) => {
             const url = buildUrl(src.base, { ac: 'list', t, pg: 1 });
-            // 探测时少重试，避免整体太慢
-            const data = await fetchJson(url, src.id, 0);
+            const data = await fetchJson(url, src.id, 0, 6000);
             const first = data.list?.[0];
             if (!first || !first.type_name)
                 return null;
@@ -334,6 +416,7 @@ export async function discoverCategories(src) {
                 id: String(t),
                 name: first.type_name,
                 total: Number(data.total ?? 0) || 0,
+                parent: null,
             };
         }));
         let chunkOk = 0;
@@ -349,23 +432,18 @@ export async function discoverCategories(src) {
                 return [];
         }
         if (i + CONCURRENCY < candidates.length) {
-            await new Promise((r) => setTimeout(r, 250));
+            await new Promise((r) => setTimeout(r, 100));
         }
     }
-    // 按分类名归并，保留条数最多的 id
     const best = new Map();
     for (const cur of results) {
         if (!cur)
             continue;
         const prev = best.get(cur.name);
-        if (!prev || cur.total > prev.total) {
+        if (!prev || (cur.total ?? 0) > (prev.total ?? 0)) {
             best.set(cur.name, cur);
         }
     }
-    // 过滤僵尸分类：实测有几条只有 1~4 部的占位分类（电影片/连续剧/综艺片/动漫片），
-    // 留着会占满界面但点进去没内容
-    return [...best.values()]
-        .filter((c) => c.total >= MIN_CATEGORY_TOTAL)
-        .sort((a, b) => b.total - a.total);
+    return [...best.values()].filter((c) => (c.total ?? 0) >= MIN_CATEGORY_TOTAL);
 }
 export { TYPE_MAP };

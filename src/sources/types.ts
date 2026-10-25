@@ -26,6 +26,22 @@ export interface RawResponse {
   limit?: string | number;
   total?: number;
   list?: RawVod[];
+  /**
+   * 分类树。`ac=list` 的响应几乎都会带（苹果CMS 标准字段）。
+   *
+   * 这是**一次请求就能拿到全部分类**的关键：以前我们靠 `t=1..40` 逐个探测，
+   * 8 个源要 320 次请求（实测 57.8 秒），而且 id>40 的分类直接漏掉
+   * （lziapi 的短剧=46、AI漫剧=52 就是这么丢的）。
+   */
+  class?: RawCategory[];
+}
+
+/** 分类树节点（字段来自 macCMS 标准） */
+export interface RawCategory {
+  type_id: number | string;
+  type_name: string;
+  /** 父分类 id；部分源没有这个字段（实测 hongniu / sdzy 只给 id+name） */
+  type_pid?: number | string;
 }
 
 /** 单集 */

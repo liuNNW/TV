@@ -4,11 +4,11 @@
  * 某个采集站挂掉（比如 api.wujinapi.me 当前就不可达）时自动跳到下一个，
  * 保证只要有一个源活着，站点就能用。
  */
-import { CACHE_MAX_PAGES, CACHE_TTL_MS, DATA_DIR, MIN_CATEGORY_TOTAL, SOURCES } from '../config.js';
+import { CACHE_MAX_PAGES, CACHE_TTL_MS, DATA_DIR, SOURCES } from '../config.js';
 import { chmod, mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { LruCache, cached } from '../cache.js';
-import { groupByChannel } from '../channels.js';
+import { CATEGORY_BLOCK, CONTAINER_NAMES, canonicalName, groupByChannel } from '../channels.js';
 import * as maccms from './maccms.js';
 /** 列表页缓存（含封面），key = 源:分类:页码 */
 const listCache = new LruCache(CACHE_MAX_PAGES, CACHE_TTL_MS);
@@ -308,13 +308,21 @@ export async function healthAll() {
         return { ...base, disabled: isSourceDisabled(src.id) };
     });
 }
-/** 分类探测要打 40 个请求，缓存起来，避免每次开首页都探测 */
+/**
+ * 分类缓存结构版本。
+ * 2 = 改为读源的 `class` 树（含 parent / total 可空）。
+ * 旧版本缓存里的分类没有层级、还可能漏掉 id>40 的分类，直接作废重采（分类是廉价数据）。
+ */
+const CATEGORY_CACHE_VERSION = 2;
+/**
+ * 收集分类：每源 1 次 `ac=list` 读 `class` 树，秒级完成（旧实现要打 320 次请求 / 57 秒）。
+ */
 const CATEGORY_TTL = 6 * 60 * 60 * 1000; // 6 小时
 let categoryCache = null;
 let categoryInflight = null;
 /**
- * 磁盘持久化：内存缓存重启就没了，11 个源冷启动探测要几十秒，
- * 落盘后 NAS 重启服务也能秒开首页。写失败（只读盘等）不影响功能。
+ * 磁盘持久化：内存缓存重启就没了，落盘后 NAS 重启服务也能秒开首页。
+ * 写失败（只读盘等）不影响功能。
  */
 const CATEGORY_DISK_FILE = join(DATA_DIR, 'categories-cache.json');
 async function loadDiskCategories() {
@@ -322,11 +330,14 @@ async function loadDiskCategories() {
         const text = await readFile(CATEGORY_DISK_FILE, 'utf8');
         const obj = JSON.parse(text);
         if (obj && typeof obj.at === 'number' && obj.bySource && !Array.isArray(obj.bySource)) {
+            // 版本不符直接丢（升级后旧分类没有层级，还漏 id>40 的）
+            if (obj.version !== CATEGORY_CACHE_VERSION)
+                return null;
             return obj;
         }
     }
     catch {
-        // 没有缓存文件就正常探测
+        // 没有缓存文件就正常采集
     }
     return null;
 }
@@ -360,38 +371,55 @@ async function saveDiskCategories(c) {
 /**
  * 取各源的分类。
  *
- * 各源分类 id 不通用，所以按源分别探测，并在上层做归并
- * （同名分类只保留一个 id，前端用「源:分类」的方式区分）。
+ * 每源 1 次 `ac=list` 读 `class` 树，8 个源并行 ≈ 秒级（旧实现逐个探测要 320 次请求 / 57 秒）。
+ * 有源超时会让整批变慢（最坏等它 6s 超时），所以：
+ *   - 失败源不进缓存；
+ *   - 整批标记 `partial`，TTL 从 6 小时降到 5 分钟，很快会重试补齐。
  */
 export async function getCategories(force = false) {
-    if (!force && categoryCache && Date.now() - categoryCache.at < CATEGORY_TTL) {
+    // 缺源的缓存 30 分钟后重试（别 5 分钟一刷 —— 慢源每次都卡满超时，反而更慢）
+    const ttlOf = (c) => (c.partial ? 30 * 60_000 : CATEGORY_TTL);
+    if (!force && categoryCache && Date.now() - categoryCache.at < ttlOf(categoryCache)) {
         return categoryCache;
     }
     if (categoryInflight)
         return categoryInflight;
-    // 内存没有 → 先看磁盘（同样受 TTL 约束），命中就不用探测了
+    // 内存没有 → 先看磁盘（同样受 TTL 约束），命中就不用采集了
     if (!force && !categoryCache) {
         const disk = await loadDiskCategories();
-        if (disk && Date.now() - disk.at < CATEGORY_TTL) {
+        if (disk && Date.now() - disk.at < ttlOf(disk)) {
             categoryCache = disk;
             return categoryCache;
         }
     }
     categoryInflight = (async () => {
-        const bySource = {};
+        // 沿用已有结果做底：这次没采到的源保留上一次的数据，不要把整批覆盖成「只有成功的那些」
+        const bySource = { ...(categoryCache?.bySource ?? {}) };
         const targets = activeSources();
-        const results = await Promise.allSettled(targets.map(async (src) => ({ id: src.id, cats: await maccms.discoverCategories(src) })));
-        for (let i = 0; i < results.length; i++) {
-            const r = results[i];
+        // 非强制刷新时只补「还没有分类」的源，已经采到的不用再打扰上游
+        const pending = force ? targets : targets.filter((s) => !bySource[s.id]);
+        const queue = pending.length > 0 ? pending : targets;
+        // 全部并行：每个源只发 1 个请求，串行反而把慢源的超时叠加到总时长上
+        // （实测分 3 批要 10~16s，并行只要 5s 左右）。
+        // 慢源超时后不写缓存，下次只补它一个，几秒就能补上。
+        const settled = await Promise.allSettled(queue.map(async (src) => ({ id: src.id, cats: await maccms.discoverCategories(src) })));
+        for (let k = 0; k < settled.length; k++) {
+            const r = settled[k];
             if (r.status === 'fulfilled') {
                 noteOk(r.value.id);
                 bySource[r.value.id] = r.value.cats;
             }
             else {
-                noteFail(targets[i].id);
+                noteFail(queue[k].id);
             }
         }
-        categoryCache = { at: Date.now(), bySource };
+        categoryCache = {
+            version: CATEGORY_CACHE_VERSION,
+            at: Date.now(),
+            bySource,
+            // 还有源缺（历史上也没采到过）才算 partial
+            partial: targets.some((s) => !bySource[s.id]),
+        };
         categoryInflight = null;
         void saveDiskCategories(categoryCache);
         return categoryCache;
@@ -400,22 +428,49 @@ export async function getCategories(force = false) {
 }
 export async function mergedCategories(force = false) {
     const cache = await getCategories(force);
+    // 先收集「谁被当成父节点用过」→ 这些分类自己是容器，不该出现在分类行
+    const parentNames = new Set();
+    for (const src of SOURCES) {
+        for (const c of cache.bySource[src.id] ?? []) {
+            if (c.parent)
+                parentNames.add(canonicalName(c.parent));
+        }
+    }
     const byName = new Map();
     for (const src of SOURCES) {
         const cats = cache.bySource[src.id];
         if (!cats)
             continue;
         for (const c of cats) {
-            let entry = byName.get(c.name);
+            const name = canonicalName(c.name);
+            if (!name || CATEGORY_BLOCK.has(name))
+                continue;
+            let entry = byName.get(name);
             if (!entry) {
-                entry = { name: c.name, refs: [], total: 0 };
-                byName.set(c.name, entry);
+                entry = {
+                    name,
+                    refs: [],
+                    total: 0,
+                    parent: c.parent ? canonicalName(c.parent) : null,
+                    // 两道判据：被谁当过父节点（有 type_pid 的源），或本身就是伞形名（没 pid 的源）
+                    container: parentNames.has(name) || CONTAINER_NAMES.has(name),
+                };
+                byName.set(name, entry);
             }
-            entry.refs.push({ source: src.id, sourceName: src.name, id: c.id, total: c.total });
-            entry.total += c.total;
+            // 同一个源里可能有两条归一到同一名（如 sdzy 的 港剧/台剧）→ 只留第一条，
+            // 否则「分类名 → 源 id」会出现一个源两个 id 的歧义
+            if (entry.refs.some((r) => r.source === src.id))
+                continue;
+            entry.refs.push({
+                source: src.id,
+                sourceName: src.name,
+                id: c.id,
+                total: c.total ?? 0,
+            });
+            entry.total += c.total ?? 0;
         }
     }
-    return [...byName.values()].sort((a, b) => b.total - a.total);
+    return [...byName.values()].sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
 }
 /**
  * 批量取封面信息（渐进式加载用）。
@@ -448,8 +503,37 @@ export async function coversByIds(ids, sourceId) {
  *
  * 这一层是为了解决「首页把 31 个分类全平铺」的问题：
  * 前端只需要「当前频道下的几个分类」，而不是全部。
+ *
+ * 注意：默认**不按条数过滤**（条数现在默认不采集，见 maccms.discoverCategories）。
+ * 僵尸分类/容器分类已经在 mergedCategories 里按「结构 + 屏蔽名单」处理掉了。
  */
 export async function channelGroups(force = false) {
     const cats = await mergedCategories(force);
-    return groupByChannel(cats, MIN_CATEGORY_TOTAL);
+    return groupByChannel(cats, 0);
+}
+/**
+ * 给分类补条数（只有 `?counts=1` 才调）。
+ *
+ * 代价明确：每个源的每个分类一次 `ac=list&t=`，8 源 × 约 16 分类 ≈ 128 次请求。
+ * 所以默认不采集，只在用户显式要求时跑，结果写回缓存（TTL 6h）。
+ */
+export async function enrichCategoryCounts() {
+    const cache = await getCategories();
+    const results = await Promise.allSettled(SOURCES.map(async (src) => {
+        const cats = cache.bySource[src.id];
+        if (!cats || cats.length === 0)
+            return;
+        const counts = await maccms.fetchCategoryCounts(src, cats.map((c) => c.id));
+        for (const c of cats) {
+            const n = counts.get(c.id);
+            if (n !== undefined)
+                c.total = n;
+        }
+    }));
+    // 有任何一个源成功就算部分成功，落盘免得下次重来
+    if (results.some((r) => r.status === 'fulfilled')) {
+        cache.version = CATEGORY_CACHE_VERSION;
+        cache.at = Date.now();
+        void saveDiskCategories(cache);
+    }
 }

@@ -37,18 +37,23 @@ export type FacetKey = 'area' | 'year' | 'lang';
 export type AppliedFacets = Partial<Record<FacetKey, string>>;
 
 /**
- * macCMS 地区词表（**短写法**，顺序按常见程度）。
+ * macCMS 地区词表。
+ *
+ * **display 用源站写法，value 用 macCMS 认的短写法**：
+ * 源站（wzzycc 那套）的筛选行写的是「中国大陆 / 中国香港 / 中国台湾」，
+ * 而 macCMS 的 `area` 参数只认「大陆 / 香港 / 台湾」（传长写法会被**静默忽略、返回全量**）。
+ * 所以 label 跟源站对齐，value 保持能真正生效的短词。
  *
  * 已实测生效：大陆 香港 台湾 美国 韩国 日本 英国 法国 泰国 印度 加拿大
  *             澳大利亚 意大利 新加坡 马来西亚 其它
- * 待复测（先放进来，不支持时靠一致性守卫降级）：德国 西班牙 俄罗斯
+ * 待复测：德国 西班牙 俄罗斯
  * 故意不放：新西兰 / 阿联酋（前者实测被忽略，后者返回 0 部，放进来只会换来空结果）
  */
 export const MAC_AREA: FacetValue[] = [
   { value: '', label: '全部' },
-  { value: '大陆', label: '大陆' },
-  { value: '香港', label: '香港' },
-  { value: '台湾', label: '台湾' },
+  { value: '大陆', label: '中国大陆' },
+  { value: '香港', label: '中国香港' },
+  { value: '台湾', label: '中国台湾' },
   { value: '美国', label: '美国' },
   { value: '韩国', label: '韩国' },
   { value: '日本', label: '日本' },

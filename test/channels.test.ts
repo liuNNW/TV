@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LruCache, cached } from '../src/cache.js';
-import { channelRank, classifyChannel, groupByChannel } from '../src/channels.js';
+import {
+  CATEGORY_BLOCK,
+  canonicalName,
+  channelRank,
+  classifyChannel,
+  groupByChannel,
+} from '../src/channels.js';
 
 describe('classifyChannel', () => {
   it('电影类', () => {
@@ -48,6 +54,11 @@ describe('classifyChannel', () => {
     expect(classifyChannel('微短剧')).toBe('短剧');
     expect(classifyChannel('竖屏剧')).toBe('短剧');
     expect(classifyChannel('小程序短剧')).toBe('短剧');
+    // 短剧子类型：没有 type_pid 的源只能靠名单认
+    expect(classifyChannel('AI漫剧')).toBe('短剧');
+    expect(classifyChannel('女频恋爱')).toBe('短剧');
+    expect(classifyChannel('成长逆袭')).toBe('短剧');
+    expect(classifyChannel('重生民国')).toBe('短剧');
   });
 
   it('纪录片类（「纪录」不是「记录」，记录片仍是电影）', () => {
@@ -67,6 +78,43 @@ describe('classifyChannel', () => {
   it('判不出来归入其他', () => {
     expect(classifyChannel('未知分类abc')).toBe('其他');
     expect(classifyChannel('')).toBe('其他');
+  });
+
+  it('父分类优先：源站层级比名字规则准', () => {
+    // 「古装仙侠」名字里没有「短剧」，但它挂在「爽文短剧」下面
+    expect(classifyChannel('古装仙侠', '爽文短剧')).toBe('短剧');
+    expect(classifyChannel('女频恋爱', '爽文短剧')).toBe('短剧');
+    // NBA 靠名字规则会掉进「其他」，挂父节点就对了
+    expect(classifyChannel('NBA', '体育')).toBe('体育');
+    expect(classifyChannel('其他赛事', '体育')).toBe('体育');
+    // 父节点不在一一映射表里时，仍退回名字规则
+    expect(classifyChannel('动作片', '不认识的父节点')).toBe('电影');
+    expect(classifyChannel('动作片', null)).toBe('电影');
+  });
+
+  it('同义分类归并（8 个源一共 104 个名字，同义词很多）', () => {
+    expect(canonicalName('日剧')).toBe('日本剧');
+    expect(canonicalName('韩剧')).toBe('韩国剧');
+    expect(canonicalName('港剧')).toBe('香港剧');
+    expect(canonicalName('港澳剧')).toBe('香港剧');
+    expect(canonicalName('港台剧')).toBe('香港剧');
+    expect(canonicalName('台剧')).toBe('台湾剧');
+    expect(canonicalName('泰剧')).toBe('泰国剧');
+    expect(canonicalName('内地剧')).toBe('国产剧');
+    expect(canonicalName('中国动漫')).toBe('国产动漫');
+    expect(canonicalName('日本动漫')).toBe('日韩动漫');
+    expect(canonicalName('记录片')).toBe('纪录片');
+    expect(canonicalName('伦理')).toBe('伦理片');
+    expect(canonicalName('港台三级')).toBe('伦理片');
+    // 不在表里的原样返回
+    expect(canonicalName('动作片')).toBe('动作片');
+  });
+
+  it('非影视分类进屏蔽名单', () => {
+    for (const n of ['演员', '新闻资讯', '电影资讯', '娱乐新闻', '未分类', '科普学习']) {
+      expect(CATEGORY_BLOCK.has(n)).toBe(true);
+    }
+    expect(CATEGORY_BLOCK.has('动作片')).toBe(false);
   });
 });
 
@@ -131,6 +179,48 @@ describe('groupByChannel', () => {
 
   it('空输入返回空数组', () => {
     expect(groupByChannel([])).toEqual([]);
+  });
+
+  it('容器分类（父节点）不展示', () => {
+    const groups = groupByChannel([
+      { name: '电影片', total: 14000, refs: [], container: true },
+      { name: '动作片', total: 5000, refs: [] },
+    ]);
+    const all = groups.flatMap((g) => g.categories.map((c) => c.name));
+    expect(all).toEqual(['动作片']);
+  });
+
+  it('条数未知（total=0）时不被阈值误杀', () => {
+    // 条数默认不采集，此时 total 全是 0；若还按 minTotal 过滤，整排分类会消失
+    const groups = groupByChannel([{ name: '动作片', total: 0, refs: [] }], 50);
+    expect(groups.flatMap((g) => g.categories.map((c) => c.name))).toEqual(['动作片']);
+  });
+
+  it('按父分类归类：父节点决定频道', () => {
+    const groups = groupByChannel([
+      { name: '古装仙侠', total: 0, refs: [], parent: '爽文短剧' },
+      { name: 'NBA', total: 0, refs: [], parent: '体育' },
+    ]);
+    expect(groups.find((g) => g.name === '短剧')!.categories[0]!.name).toBe('古装仙侠');
+    expect(groups.find((g) => g.name === '体育')!.categories[0]!.name).toBe('NBA');
+  });
+
+  it('无歧义的名字优先于父节点（有源把「短剧」挂在「连续剧」下）', () => {
+    expect(classifyChannel('短剧', '连续剧')).toBe('短剧');
+    expect(classifyChannel('AI漫剧', '连续剧')).toBe('短剧');
+  });
+
+  it('伞形分类名（无 pid 的源）：有叶子时不展示，只剩它时才放回来', () => {
+    const withLeaves = groupByChannel([
+      { name: '电影', total: 0, refs: [], container: true },
+      { name: '动作片', total: 0, refs: [] },
+    ]);
+    expect(withLeaves.flatMap((g) => g.categories.map((c) => c.name))).toEqual(['动作片']);
+
+    const onlyContainer = groupByChannel([
+      { name: '电影', total: 0, refs: [], container: true },
+    ]);
+    expect(onlyContainer.flatMap((g) => g.categories.map((c) => c.name))).toEqual(['电影']);
   });
 
   it('全部被过滤时返回空数组', () => {

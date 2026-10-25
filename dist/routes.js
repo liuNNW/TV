@@ -14,7 +14,7 @@ import { planPlayback } from './playplan.js';
 import { ensureReaper, brokenEncoders, resetTranscode, startTranscode, transcodeActive, transcodeDiskUsage, transcodeFile, transcodeProgress, transcodeStatus } from './transcode.js';
 import { addLocalDir, findLocalDir, listLocalDirs, removeLocalDir } from './localdirs.js';
 import { CDN_BASE, DEFAULT_LINE, checkLine, fetchCdnPlaylist, fetchDirectPlaylist, fetchSegment, fetchSegmentUrl, fetchSuper, hoistPlayableVariants, listLines, looksLikePlaceholder, pickFastestLine, resolveMain, rewriteDyrsPlaylist, } from './dyrs.js';
-import { channelGroups, coversByIds, detailAny, detailByName, healthAll, listAny, mergedCategories, searchAll } from './sources/index.js';
+import { channelGroups, coversByIds, detailAny, detailByName, enrichCategoryCounts, healthAll, listAny, mergedCategories, searchAll } from './sources/index.js';
 import { buildMacFacets, MAC_FACET_GROUPS } from './facets.js';
 import { bindRepo, checkUpdate, jobStatus, publicConfig, readConfig, readState, runUpdate, runtimeInfo, saveConfig, scheduleRestart, } from './updater.js';
 import { addFavorite, clearHistory, getHistory, isFavorite, listFavorites, listHistory, removeFavorite, saveHistory, } from './store.js';
@@ -112,11 +112,17 @@ router.get('/categories', async (req, res) => {
 });
 /**
  * 按频道分组的分类。
- * 前端顶栏与分类行用这个，避免把全部 31 个分类一次平铺出来。
+ * 前端顶栏与分类行用这个，避免把全部分类一次平铺出来。
+ *
+ * `?counts=1` 会额外去补每个分类的条数（8 源 × 约 16 分类 ≈ 128 次上游请求），
+ * 默认不补 —— 不补时首屏 <1s，补了要十几秒。
  */
 router.get('/channels', async (req, res) => {
     try {
-        const channels = await channelGroups(q(req, 'force') === '1');
+        const force = q(req, 'force') === '1';
+        if (q(req, 'counts') === '1')
+            await enrichCategoryCounts();
+        const channels = await channelGroups(force);
         res.json({ ok: true, channels });
     }
     catch (e) {
