@@ -315,6 +315,19 @@ export const CHANNEL_OVERRIDES: Record<string, ChannelName> = {
 > `seq` 是 seqlist 编号（同一部片固定），`p` 是 **0 基**集序号。**不要**用
 > `/{kind}/{id}/{N}.html` 那个 path 形式 —— 实测 N 和集数对不上，只会返回第一集。
 > 详见 [`开发进展.md` 第十二节](开发进展.md)。
+>
+> **注意 4（必须 hls.js 优先）**：桌面 Chrome / Edge 的
+> `video.canPlayType('application/vnd.apple.mpegurl')` 返回的是 **`'maybe'`**，
+> 照抄「先判 canPlayType 再决定用原生 HLS」的写法，等于**永远不用 hls.js**。
+> 而 Chrome 原生 HLS 只能吃最简形态，`/api/dyrs/*` 那条链（master → `cdn/m3u8?raw=1`
+> → 每片带 `#EXT-X-DISCONTINUITY`）会直接 `video.error=4`：实测《嫁金钗》12 条线路
+> 用原生时 8 条能播 / 1 条卡住 / 3 条全挂，换部片挂的又是另外几条。
+> 所以 `pickHlsEngine()` 的顺序是 **hls.js → 原生（仅 Safari/iOS）→ 不支持**，单测锁着。
+> 详见 [`开发进展.md` 第十七节](开发进展.md)。
+>
+> **注意 5（线路预检）**：`/api/dyrs/site/detail` 会给每条线路加 `alive` / `aliveState`
+> （`ok` / `weak` / `dead`）。判 `dead` 的线路在详情页置灰标「暂不可用」但**仍可点** ——
+> 预检是采样，上游 CDN（尤其 `vip1`）间歇性 502 会导致同一分钟里一会儿 dead 一会儿 ok。
 
 ### 为什么要拆成 list + covers 两步
 
@@ -342,11 +355,12 @@ export const CHANNEL_OVERRIDES: Record<string, ChannelName> = {
 
 ```bash
 npm run typecheck                      # 类型检查
-npm test                               # 单元测试（207 个 / 14 文件）
+npm test                               # 单元测试（211 个 / 14 文件）
 node scripts/acceptance.mjs            # 端到端验收（22 项）
 node scripts/source-probe.mjs --maccms <采集接口>   # 片源探测（加源前先跑这个）
 node scripts/source-probe.mjs --wzzycc <模板站地址>  # 影视仓镜像探测
-python scripts/browser-check.py        # 真实浏览器播放验证
+python scripts/browser-check.py        # 真实浏览器播放验证（首页/详情/播放）
+python scripts/lines-check.py --id <视频id> --kind tv   # 逐线路播放回归（任何一条不能播退出码 1）
 python scripts/browser-proxy-check.py  # 代理兜底路径验证
 ```
 

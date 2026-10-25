@@ -294,6 +294,74 @@ export async function fetchSearchPage(wd, line) {
 export function resetChallengeCache() {
     resetSiteSessions();
 }
+export async function probePlaylistUrl(url, timeoutMs = 2500) {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), timeoutMs);
+    try {
+        const text = await fetchPlaylistText(url, ac.signal);
+        if (text === null)
+            return 'dead';
+        // master → 挨个试 STREAM-INF 变体，只要有一条能出媒体列表就算这条线路活着。
+        // 不能只试第一条：上游 master 常给两条 CDN（vip1 / cf1），实测 vip1 会间歇性
+        // fetch failed，只试第一条会把「其实能播」的线路误判成不可用。
+        const lines = text.split(/\r?\n/);
+        const variants = [];
+        for (let i = 0; i < lines.length; i++) {
+            if (!lines[i].startsWith('#EXT-X-STREAM-INF'))
+                continue;
+            for (let j = i + 1; j < lines.length; j++) {
+                const l = (lines[j] ?? '').trim();
+                if (!l)
+                    continue;
+                if (l.startsWith('#'))
+                    continue;
+                variants.push(l);
+                break;
+            }
+        }
+        if (variants.length === 0)
+            return 'ok'; // 已经是媒体列表，master 这层就算过了
+        for (const variant of variants.slice(0, 3)) {
+            // 变体地址可能是绝对地址，也可能是 `/api/...` 相对路径，一律按 base 解析成绝对地址
+            const abs = /^https?:\/\//i.test(variant) ? variant : new URL(variant, url).toString();
+            const ac2 = new AbortController();
+            const t2 = setTimeout(() => ac2.abort(), timeoutMs);
+            try {
+                if ((await fetchPlaylistText(abs, ac2.signal)) !== null)
+                    return 'ok';
+            }
+            finally {
+                clearTimeout(t2);
+            }
+        }
+        // master 正常、变体全挂：这是「弱」而不是「死」——
+        // 浏览器里的 hls.js 会重试多次，往往还能拉起来（实测王者TV蓝光就是这样），
+        // 判死会把人从能看的线路上赶走，所以只降级不判死。
+        return 'weak';
+    }
+    catch {
+        return 'dead';
+    }
+    finally {
+        clearTimeout(timer);
+    }
+}
+/** 取播放列表文本；拿不到或不是 m3u8 就返回 null */
+async function fetchPlaylistText(url, signal) {
+    try {
+        const res = await fetch(url, { signal, redirect: 'follow' });
+        if (!res.ok)
+            return null;
+        const buf = Buffer.from(await res.arrayBuffer());
+        const head = buf.subarray(0, 512).toString('utf8');
+        if (!head.includes('#EXTM3U'))
+            return null;
+        return buf.toString('utf8');
+    }
+    catch {
+        return null;
+    }
+}
 /**
  * 把播放页给出的 url 换算成本站的取流地址。上游有两种形态，都要支持：
  *   ① 站内代理形态（多数）：`/api/m3u8?origin=线路&url={视频id}`

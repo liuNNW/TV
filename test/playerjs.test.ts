@@ -60,3 +60,54 @@ describe('player.js looksLikePlayable', () => {
     expect(mac('')).toBe(false);
   });
 });
+
+/**
+ * 播放引擎选择（pickHlsEngine）。
+ *
+ * 锁死一个线上真实事故：桌面 Chrome / Edge 的
+ * `video.canPlayType('application/vnd.apple.mpegurl')` 返回的是 **`'maybe'`**，
+ * 所以老代码「先判 canPlayType 就走原生 HLS」等于**永远不用 hls.js**。
+ * Chrome 原生 HLS 只能吃最简形态，`/api/dyrs/*` 那条链直接 err=4：
+ * 实测《嫁金钗》12 条线路 8 条能播 / 1 条不推进 / 3 条全挂，换别的片挂的又是另外几条。
+ * 强制 hls.js 接管后 12 条全绿。所以：**有 hls.js 就必须选 hls.js**。
+ */
+function extractAnyFn(name: string): string {
+  const m = source.match(new RegExp(`function ${name}\\([^)]*\\)\\s*\\{[\\s\\S]*?\\n\\}`));
+  if (!m) throw new Error(`public/player.js 里找不到函数 ${name}()`);
+  return m[0];
+}
+
+function pickWith(win: unknown, video: unknown): string {
+  const code = extractAnyFn('pickHlsEngine');
+  // eslint-disable-next-line no-new-func
+  const fn = new Function('window', `${code}; return pickHlsEngine;`)(win) as (v: unknown) => string;
+  return fn(video);
+}
+
+const canPlayMaybe = { canPlayType: () => 'maybe' };
+const canPlayNo = { canPlayType: () => '' };
+
+describe('player.js pickHlsEngine', () => {
+  it('有 hls.js 就选 hls.js —— 哪怕 canPlayType 返回 maybe（本事故的根因）', () => {
+    expect(pickWith({ Hls: { isSupported: () => true } }, canPlayMaybe)).toBe('hlsjs');
+  });
+
+  it('hls.js 不支持时才退回原生（Safari / iOS）', () => {
+    expect(pickWith({ Hls: { isSupported: () => false } }, canPlayMaybe)).toBe('native');
+    expect(pickWith({}, canPlayMaybe)).toBe('native');
+  });
+
+  it('两边都不行才算不支持', () => {
+    expect(pickWith({}, canPlayNo)).toBe('none');
+    expect(pickWith({ Hls: null }, canPlayNo)).toBe('none');
+  });
+
+  it('canPlayType 抛错时不崩，按不支持处理', () => {
+    const boom = {
+      canPlayType: () => {
+        throw new Error('boom');
+      },
+    };
+    expect(pickWith({}, boom)).toBe('none');
+  });
+});

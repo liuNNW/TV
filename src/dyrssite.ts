@@ -364,6 +364,88 @@ export function resetChallengeCache(): void {
   resetSiteSessions();
 }
 
+/* ---------------- 线路可用性预检 ---------------- */
+
+/**
+ * 探一条线路到底能不能出流。
+ *
+ * 只做「能不能拿到播放列表」这一层的判断（前 512 字节里有没有 `#EXTM3U`）：
+ *   - 足够识别「详情里解析出了地址、但 CDN 已经挂了」的线路
+ *     （实测 xiguam3u8 的 svip.xgplay20.com 会整段 502，而 1080zyk 某个 CDN 也会这样）；
+ *   - 不判分片，避免把探活做成一次完整播放（那会把详情页拖到十几秒）。
+ *
+ * `deep`（默认开）：master 里如果还有 `#EXT-X-STREAM-INF`，就**再跟一层**去要真正的
+ * 媒体列表。只判 master 会说谎 —— 实测某部片的「超级线路」master 正常返回，
+ * 但它下面两条 CDN（vip1 / cf1）里第一条间歇性 fetch failed，用户点进去照样黑屏。
+ *
+ * 传进来的 url 允许是**本站同源地址**（`/api/proxy?url=…` / `/api/dyrs/m3u8?…`），
+ * 这样探活走的正是浏览器要走的那条链路，探到的结果不会和实际播放不一致。
+ */
+export type PlaylistProbe = 'ok' | 'weak' | 'dead';
+
+export async function probePlaylistUrl(
+  url: string,
+  timeoutMs = 2500,
+): Promise<PlaylistProbe> {
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), timeoutMs);
+  try {
+    const text = await fetchPlaylistText(url, ac.signal);
+    if (text === null) return 'dead';
+
+    // master → 挨个试 STREAM-INF 变体，只要有一条能出媒体列表就算这条线路活着。
+    // 不能只试第一条：上游 master 常给两条 CDN（vip1 / cf1），实测 vip1 会间歇性
+    // fetch failed，只试第一条会把「其实能播」的线路误判成不可用。
+    const lines = text.split(/\r?\n/);
+    const variants: string[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (!lines[i]!.startsWith('#EXT-X-STREAM-INF')) continue;
+      for (let j = i + 1; j < lines.length; j++) {
+        const l = (lines[j] ?? '').trim();
+        if (!l) continue;
+        if (l.startsWith('#')) continue;
+        variants.push(l);
+        break;
+      }
+    }
+    if (variants.length === 0) return 'ok'; // 已经是媒体列表，master 这层就算过了
+
+    for (const variant of variants.slice(0, 3)) {
+      // 变体地址可能是绝对地址，也可能是 `/api/...` 相对路径，一律按 base 解析成绝对地址
+      const abs = /^https?:\/\//i.test(variant) ? variant : new URL(variant, url).toString();
+      const ac2 = new AbortController();
+      const t2 = setTimeout(() => ac2.abort(), timeoutMs);
+      try {
+        if ((await fetchPlaylistText(abs, ac2.signal)) !== null) return 'ok';
+      } finally {
+        clearTimeout(t2);
+      }
+    }
+    // master 正常、变体全挂：这是「弱」而不是「死」——
+    // 浏览器里的 hls.js 会重试多次，往往还能拉起来（实测王者TV蓝光就是这样），
+    // 判死会把人从能看的线路上赶走，所以只降级不判死。
+    return 'weak';
+  } catch {
+    return 'dead';
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** 取播放列表文本；拿不到或不是 m3u8 就返回 null */
+async function fetchPlaylistText(url: string, signal: AbortSignal): Promise<string | null> {
+  try {
+    const res = await fetch(url, { signal, redirect: 'follow' });
+    if (!res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    const head = buf.subarray(0, 512).toString('utf8');
+    if (!head.includes('#EXTM3U')) return null;
+    return buf.toString('utf8');
+  } catch {
+    return null;
+  }
+}
+
 /* ---------------- 取流地址换算 ---------------- */
 
 export interface PlayUrlInfo {

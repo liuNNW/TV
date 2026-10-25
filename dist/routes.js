@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
-import { TYPE_MAP } from './config.js';
+import { PORT, TYPE_MAP } from './config.js';
 import { checkUrl, proxyFetch } from './proxy.js';
 import { processPlaylist } from './adfilter.js';
 import { getMarker, setMarker } from './store.js';
@@ -888,7 +888,7 @@ router.get('/dyrs/seg', async (req, res) => {
     }
 });
 /* ---------------- dyrs 站点数据（新 UI 用，抓镜像站 HTML 解析） ---------------- */
-import { buildSiteListPath, fetchDriveList, fetchSearchPage, fetchSiteImage, fetchSitePage, findPreset, isSiteChannel, isValidLineFilter, parseBanner, parseCards, parseDetail, parseFilters, parseMaxPage, parsePlayPage, pickLine, resetSitePageCache, SITE_CHANNELS, SITE_PRESETS, toPlaySrc, } from './dyrssite.js';
+import { buildSiteListPath, fetchDriveList, fetchSearchPage, fetchSiteImage, fetchSitePage, findPreset, isSiteChannel, isValidLineFilter, parseBanner, parseCards, parseDetail, parseFilters, parseMaxPage, parsePlayPage, pickLine, probePlaylistUrl, resetSitePageCache, SITE_CHANNELS, SITE_PRESETS, toPlaySrc, } from './dyrssite.js';
 /** 上游真实频道（与 dyrssite.ts 的 SITE_CHANNELS 同源，避免两处各写一份） */
 const DYRS_CHANNELS = SITE_CHANNELS;
 const DYRS_KINDS = ['movie', 'tv', 'zongyi', 'duanju'];
@@ -1141,9 +1141,33 @@ router.get('/dyrs/site/detail', async (req, res) => {
         const origins = rows.filter((r) => !!r);
         if (!origins.length)
             return fail(res, 502, '这部片的线路都没能解析出选集，稍后再试');
-        // 真实 m3u8 的线路排前面（dyrs 自家 CDN 要绕一层 raw=1，慢且更容易抽）
-        origins.sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'direct' ? -1 : 1));
-        const data = { ...base, origins };
+        // 线路可用性预检：
+        // 「解析出选集」不等于「真能出流」—— 实测有线路的 CDN 会整段 502（xiguam3u8 的
+        // svip.xgplay20.com），也有线路的 master 直接超时。用户点进去才发现播不了最难受，
+        // 所以在详情里就探一次（3 层判断见 probePlaylistUrl，2.5s 超时、并发 6）。
+        //
+        //   ok   → alive: true   正常
+        //   weak → alive: null   能拿到 master 但变体这会儿拉不动（hls.js 会重试，多数还能播）
+        //   dead → alive: false  连 master 都拿不到，界面上置灰
+        const probeBase = `http://127.0.0.1:${PORT}`;
+        const checked = await mapLimit(origins, 6, async (o) => {
+            const t0 = Date.now();
+            const first = o.episodes[0];
+            const state = first ? await probePlaylistUrl(probeBase + first.src, 2500) : 'dead';
+            return { ...o, alive: state === 'ok' ? true : state === 'dead' ? false : null, aliveState: state, probeMs: Date.now() - t0 };
+        });
+        // 能确认出流的排前面，其次「待确认」，最后才是判死的；同等条件下 direct（真 m3u8）
+        // 优先于 dyrs 自家 CDN（后者要绕一层 raw=1，慢且更容易抽）
+        const rank = (s) => (s === 'ok' ? 0 : s === 'weak' ? 1 : 2);
+        checked.sort((a, b) => {
+            const d = rank(a.aliveState) - rank(b.aliveState);
+            if (d !== 0)
+                return d;
+            if (a.kind === b.kind)
+                return 0;
+            return a.kind === 'direct' ? -1 : 1;
+        });
+        const data = { ...base, origins: checked };
         if (dyrsDetailCache.size > 60)
             dyrsDetailCache.clear();
         dyrsDetailCache.set(cacheKey, { at: Date.now(), data });

@@ -154,7 +154,12 @@ async function loadDrive() {
 function renderLines() {
   document.getElementById('lineBox').innerHTML = origList.map((o, i) => {
     const active = i === originIndex ? ' active' : '';
-    return `<button class="${active}" onclick="pickLine(${i})" title="${esc(o.origin)}">线路 ${i + 1} · ${esc(o.origin)} (${o.episodes.length})</button>`;
+    // alive === false 是后端预检出来的「地址解析出来了，但取不到流」
+    // （实测有线路的 CDN 整段 502）。置灰但**仍然可点** —— 预检只判 master，
+    // 偶尔会误报，不该直接把人挡在外面。
+    const dead = o.alive === false ? ' dead' : '';
+    const tag = o.alive === false ? ' · 暂不可用' : '';
+    return `<button class="${active}${dead}" onclick="pickLine(${i})" title="${esc(o.origin)}${tag}">线路 ${i + 1} · ${esc(o.origin)} (${o.episodes.length})${tag}</button>`;
   }).join('');
 }
 

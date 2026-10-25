@@ -1375,6 +1375,14 @@ button:focus-visible,
 .lines button.preset:hover { background: var(--bg-3); }
 .lines button.preset.active { border-style: solid; background: var(--accent); color: #fff; }
 
+/* 预检判定「取不到流」的线路：置灰但仍可点（预检只判 master，偶尔误报） */
+.lines button.dead {
+  opacity: .5;
+  border-style: dotted;
+  text-decoration: line-through;
+}
+.lines button.dead.active { opacity: .85; text-decoration: none; }
+
 /* 已选条件下的 chips */
 .facet-chips {
   display: flex;

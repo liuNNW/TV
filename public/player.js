@@ -41,6 +41,8 @@ let dyrsError = '';
 let dyrsSeq = '1';
 /** 本集是否已经试过「用 302 跳板重新解析」 */
 let dyrsFallbackTried = false;
+/** 影视仓：已尝试过的档位切换次数（上游 master 常给多条 CDN，vip1 会间歇性失败） */
+let dyrsLevelTries = 0;
 
 let detail = null;      // 完整详情
 let hls = null;         // hls.js 实例
@@ -447,22 +449,51 @@ function loadEpisode() {
   usingProxy = proxySticky;
   mediaRecoverTries = 0;
   dyrsFallbackTried = false;
+  dyrsLevelTries = 0;
   showOverlay('<span class="spinner"></span> 正在连接片源…');
 
-  if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    // Safari 原生 HLS
+  const engine = pickHlsEngine(video);
+  if (engine === 'none') {
+    showOverlay('当前浏览器不支持 HLS 播放，建议使用 Chrome / Edge。', true);
+    return;
+  }
+  if (engine === 'native') {
+    // 只有 Safari / iOS 会走到这里（那边没有 MSE，hls.js 用不了）
     video.src = buildSrc(url, proxySticky);
     video.load();
     video.play().catch(() => {});
     hideOverlay();
     return;
   }
-  if (!window.Hls || !window.Hls.isSupported()) {
-    showOverlay('当前浏览器不支持 HLS 播放，建议使用 Chrome / Edge。', true);
-    return;
-  }
 
   attachHls(url, proxySticky);
+}
+
+/**
+ * 选播放引擎。
+ *
+ * ⚠️ 顺序不能反：**桌面 Chrome / Edge 的 `canPlayType('application/vnd.apple.mpegurl')`
+ * 返回的是 `'maybe'`**（不是空串），照抄「先判 canPlayType」的写法就会一直走原生 HLS，
+ * hls.js 永远用不上。而 Chrome 原生 HLS（Windows 走 Media Foundation）只覆盖最简形态：
+ *
+ *   - 简单直链 master 能放；
+ *   - `/api/dyrs/*` 那条链（master → cdn/m3u8?raw=1 → 每片带 #EXT-X-DISCONTINUITY）
+ *     直接 `video.error = 4`（MEDIA_ERR_SRC_NOT_SUPPORTED）。
+ *
+ * 实测《嫁金钗》12 条线路：走原生时 8 条能播 / 1 条有画面不推进 / 3 条全挂
+ * （超级线路、王者TV加速、wztv），而且换一部片子挂的又是另外几条 —— 每次靠运气。
+ * 强制 hls.js 接管后 12 条全部 readyState=4、error=0、时长正确，currentTime 真实推进。
+ *
+ * 所以：**hls.js 优先，原生只在 hls.js 不支持时兜底**（Safari / iOS）。
+ */
+function pickHlsEngine(video) {
+  if (typeof window !== 'undefined' && window.Hls && window.Hls.isSupported()) return 'hlsjs';
+  try {
+    if (video && video.canPlayType('application/vnd.apple.mpegurl')) return 'native';
+  } catch {
+    /* 老浏览器没有 canPlayType，当不支持处理 */
+  }
+  return 'none';
 }
 
 function attachHls(url, viaProxy) {
@@ -523,26 +554,63 @@ function attachHls(url, viaProxy) {
   });
 
   hls.on(window.Hls.Events.ERROR, (_evt, data) => {
-    if (!data || !data.fatal) return;
+    if (!data) return;
 
     const T = window.Hls.ErrorTypes;
     const type = data.type || '';
-    const detail = String(data.details || type) || '未知错误';
+    // 注意别叫 detail：模块级的 `detail` 是详情数据（lines/episodes），
+    // 这里一旦同名，下面第 4 段的 `detail.lines[...]` 就会静默变成对字符串取属性，
+    // 导致「重新解析」跳板拿不到 origin / p，兜底直接失效。
+    const errText = String(data.details || type) || '未知错误';
+    const lineName = (detail && detail.lines && detail.lines[lineIndex] && detail.lines[lineIndex].origin) || '';
+    const withLine = (msg) => (lineName ? `${msg}（线路：${lineName}）` : msg);
+
+    /**
+     * 影视仓换档：把已经确认坏掉的档位跳过。
+     *
+     * 上游 master 常给两条 CDN（vip1 / cf1），实测 vip1 会间歇性 fetch failed，
+     * 而 attachHls 为了避开「返回占位图的那条」把 startLevel 钉死在 0 —— 一旦那条抽风，
+     * hls.js 会一路重试到致命错误才认输，实测要等 15 秒才出画面。
+     * 所以这里**非致命的分片/列表错误也换档**，别让用户干等。
+     */
+    const tryNextDyrsLevel = () => {
+      if (!isDyrs) return false;
+      const retryable = type === T.NETWORK_ERROR || /LoadError|LoadTimeOut|TimeOut|Timeout/i.test(errText);
+      if (!retryable) return false;
+      const levelCount = (hls.levels && hls.levels.length) || 0;
+      if (levelCount < 2 || dyrsLevelTries >= levelCount - 1) return false;
+      dyrsLevelTries++;
+      const next = (Math.max(0, hls.currentLevel) + dyrsLevelTries) % levelCount;
+      console.warn(`[hls] 影视仓换档重试：level ${hls.currentLevel} → ${next}（${errText}）`);
+      try {
+        hls.nextLevel = next;
+        hls.startLoad();
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    // 非致命错误：只做换档，不弹报错
+    if (!data.fatal) {
+      tryNextDyrsLevel();
+      return;
+    }
 
     // 1) 解码 / 缓冲类错误：换代理解决不了，先按 hls.js 的标准姿势原地恢复一次
     if (type === T.MEDIA_ERROR) {
       if (mediaRecoverTries < 1) {
         mediaRecoverTries++;
-        console.warn('[hls] 媒体错误，尝试原地恢复:', detail);
+        console.warn('[hls] 媒体错误，尝试原地恢复:', errText);
         try { hls.recoverMediaError(); return; } catch { /* 恢复不了就往下报错 */ }
       }
-      showOverlay(`播放失败：${detail}`, true);
+      showOverlay(withLine(`播放失败：${errText}`), true);
       return;
     }
 
     // 2) 解析类错误：片源自己格式有问题，代理也救不了，直接说清楚
-    if (/parsing/i.test(detail)) {
-      showOverlay(`片源播放列表无法解析（${detail}），请返回详情页换一条线路。`, true);
+    if (/parsing/i.test(errText)) {
+      showOverlay(withLine(`片源播放列表无法解析（${errText}），请返回详情页换一条线路。`), true);
       return;
     }
 
@@ -553,28 +621,32 @@ function attachHls(url, viaProxy) {
     //    影视仓本来就全程同源，没有「换代理」这个选项。
     if (type === T.NETWORK_ERROR && !usingProxy && !isDyrs) {
       const firstTime = !proxySticky;
-      console.warn('[hls] 直连取流失败，改用本机代理重试:', detail);
+      console.warn('[hls] 直连取流失败，改用本机代理重试:', errText);
       setProxySticky(true);
       if (firstTime) toast('片源不支持直连，已自动改用本机代理');
       attachHls(url, true);
       return;
     }
 
-    // 4) 影视仓：详情里带的取流地址可能有时效（上游 CDN 会给带令牌的直链），
-    //    先让后端按 origin + 集序号重新解析一次，成了就当无事发生。
-    if (isDyrs && type === T.NETWORK_ERROR && !dyrsFallbackTried) {
-      const cur = (detail && detail.lines[lineIndex] && detail.lines[lineIndex].episodes[epIndex]) || {};
-      const jump = dyrsJumpUrl(cur);
-      dyrsFallbackTried = true;
-      if (jump !== url) {
-        console.warn('[hls] 影视仓取流失败，改用 302 跳板重新解析:', detail);
-        toast('这条线路取流失败，正在重新解析…');
-        attachHls(jump, false);
-        return;
+    // 4) 影视仓：先换档，再换地址。
+    if (isDyrs) {
+      if (tryNextDyrsLevel()) return;
+
+      // 档位都试过了，再让后端按 origin + 集序号重新解析一次
+      if (type === T.NETWORK_ERROR && !dyrsFallbackTried) {
+        const cur = (detail && detail.lines[lineIndex] && detail.lines[lineIndex].episodes[epIndex]) || {};
+        const jump = dyrsJumpUrl(cur);
+        dyrsFallbackTried = true;
+        if (jump !== url) {
+          console.warn('[hls] 影视仓取流失败，改用 302 跳板重新解析:', errText);
+          toast('这条线路取流失败，正在重新解析…');
+          attachHls(jump, false);
+          return;
+        }
       }
     }
 
-    showOverlay(`播放失败：${detail}${isDyrs ? '。这条线路取不到分片，换一条线路试试。' : ''}`, true);
+    showOverlay(withLine(`播放失败：${errText}${isDyrs ? '。这条线路取不到分片，换一条线路试试。' : ''}`), true);
   });
 
   hls.loadSource(buildSrc(url, viaProxy));
@@ -830,7 +902,11 @@ video.addEventListener('ended', () => {
 });
 
 video.addEventListener('error', () => {
-  // 影视仓：Safari 走原生 HLS，没有 hls.js 的 ERROR 回调，这里兜底给提示 + 重试
+  // hls.js 接管时，错误一律由它自己的 ERROR 回调处理（那里能拿到 details 和恢复手段）。
+  // 这个监听只负责「原生 HLS」那条路（Safari / iOS）。
+  if (hls) return;
+
+  // 影视仓：原生 HLS（Safari）失败，没有 hls.js 的 ERROR 回调，这里兜底给提示
   if (isDyrs) {
     if (currentUrl()) showOverlay('取流失败，点「重新加载」再试一次；还不行就换一条线路。', true);
     return;
