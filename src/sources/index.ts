@@ -27,6 +27,75 @@ export function findSource(id: string | undefined): SourceConfig | undefined {
   return SOURCES.find((s) => s.id === id);
 }
 
+/* ---------------- 源健康熔断 ---------------- */
+
+/**
+ * 连续失败就把这个源临时踢出队列。
+ *
+ * 背景：采集站挂掉是常态（2026-10-25 实测 11 个配置源里 3 个超时）。
+ * 死源一直留在 `SOURCES` 里，每次列表/搜索/探测都要白等一轮超时，
+ * 用户看到的是「整个站都慢」，而不是「少了一个源」。
+ *
+ * 策略刻意保守：连续 3 次失败才禁用，10 分钟后自动恢复，重启即清空。
+ * 宁可多试一次，也不要因为一次抖动就把一个好源封掉。
+ */
+const FAIL_THRESHOLD = 3;
+const DISABLE_MS = 10 * 60_000;
+
+interface SourceState {
+  fails: number;
+  /** 0 表示没被禁用 */
+  disabledUntil: number;
+}
+
+const sourceState = new Map<string, SourceState>();
+
+/** 该源当前是否被熔断 */
+export function isSourceDisabled(id: string): boolean {
+  const s = sourceState.get(id);
+  if (!s) return false;
+  if (s.disabledUntil > Date.now()) return true;
+  if (s.disabledUntil !== 0) {
+    // 冷却结束，清零重新计
+    s.disabledUntil = 0;
+    s.fails = 0;
+  }
+  return false;
+}
+
+function noteOk(id: string): void {
+  sourceState.delete(id);
+}
+
+function noteFail(id: string): void {
+  const s = sourceState.get(id) ?? { fails: 0, disabledUntil: 0 };
+  s.fails += 1;
+  if (s.fails >= FAIL_THRESHOLD) {
+    s.disabledUntil = Date.now() + DISABLE_MS;
+    s.fails = 0;
+  }
+  sourceState.set(id, s);
+}
+
+/**
+ * 当前参与轮询的源。
+ * 全都被熔断时退回全部 —— 宁可慢，也不要整站返回空。
+ */
+function activeSources(): SourceConfig[] {
+  const live = SOURCES.filter((s) => !isSourceDisabled(s.id));
+  return live.length > 0 ? live : SOURCES;
+}
+
+/** 熔断状态快照（诊断用） */
+export function sourceHealthSnapshot(): { id: string; disabled: boolean }[] {
+  return SOURCES.map((s) => ({ id: s.id, disabled: isSourceDisabled(s.id) }));
+}
+
+/** 清空熔断状态（测试与「诊断页重试」用） */
+export function resetSourceHealth(): void {
+  sourceState.clear();
+}
+
 /** 去重：同一部片多个源都有时，按 name+year 合并，保留先返回的 */
 function dedupe(items: Item[]): Item[] {
   const seen = new Set<string>();
@@ -45,8 +114,9 @@ function dedupe(items: Item[]): Item[] {
  * 每个源单独 try/catch，一个挂了不影响其他。
  */
 export async function searchAll(wd: string): Promise<{ items: Item[]; okSources: string[]; failed: string[] }> {
+  const targets = activeSources();
   const results = await Promise.allSettled(
-    SOURCES.map(async (src) => ({ src, items: await maccms.search(src, wd) })),
+    targets.map(async (src) => ({ src, items: await maccms.search(src, wd) })),
   );
 
   const all: Item[] = [];
@@ -55,11 +125,13 @@ export async function searchAll(wd: string): Promise<{ items: Item[]; okSources:
 
   for (let i = 0; i < results.length; i++) {
     const r = results[i]!;
-    const src = SOURCES[i]!;
+    const src = targets[i]!;
     if (r.status === 'fulfilled') {
+      noteOk(src.id);
       okSources.push(src.id);
       all.push(...r.value.items);
     } else {
+      noteFail(src.id);
       failed.push(src.id);
     }
   }
@@ -80,7 +152,8 @@ export async function listAny(
   sourceId?: string,
 ): Promise<ListResult> {
   const preferred = findSource(sourceId);
-  const order = preferred ? [preferred] : SOURCES;
+  // 明确指定源时即使它被熔断也照试（用户是点着这个源来的，别替他决定）
+  const order = preferred ? [preferred] : activeSources();
 
   const cacheKey = `${sourceId ?? 'auto'}:${typeId ?? 'all'}:${page}`;
 
@@ -88,8 +161,11 @@ export async function listAny(
     let lastErr: unknown;
     for (const src of order) {
       try {
-        return await maccms.list(src, typeId, page);
+        const r = await maccms.list(src, typeId, page);
+        noteOk(src.id);
+        return r;
       } catch (e) {
+        noteFail(src.id);
         lastErr = e;
       }
     }
@@ -118,6 +194,7 @@ export async function detailAny(
   if (preferred) {
     try {
       const detail = await maccms.detail(preferred, id);
+      noteOk(preferred.id);
       if (detail) {
         // 带上了片名就校验一下，防止 id 对不上导致张冠李戴
         if (expectedName && detail.name !== expectedName) {
@@ -126,12 +203,13 @@ export async function detailAny(
         return { detail, source: preferred.id };
       }
     } catch {
+      noteFail(preferred.id);
       // 该源失败，走下面的按名回退
     }
 
     // 该源取不到时，按片名去其他源找同一部片（而不是按 id）
     if (expectedName) {
-      for (const src of SOURCES) {
+      for (const src of activeSources()) {
         if (src.id === preferred.id) continue;
         const found = await detailByNameIn(src, expectedName);
         if (found) return { detail: found, source: src.id };
@@ -142,13 +220,15 @@ export async function detailAny(
   }
 
   // 没指定源：依次尝试，但必须能用片名校验
-  for (const src of SOURCES) {
+  for (const src of activeSources()) {
     try {
       const detail = await maccms.detail(src, id);
+      noteOk(src.id);
       if (!detail) continue;
       if (expectedName && detail.name !== expectedName) continue;
       return { detail, source: src.id };
     } catch {
+      noteFail(src.id);
       // 下一个
     }
   }
@@ -201,14 +281,19 @@ export async function detailByName(
   }
 }
 
-/** 所有源存活状态 */
+/** 所有源存活状态（含熔断标记，死源不必反复探） */
 export async function healthAll() {
   const results = await Promise.allSettled(SOURCES.map((s) => maccms.health(s)));
-  return results.map((r, i) =>
-    r.status === 'fulfilled'
-      ? r.value
-      : { id: SOURCES[i]!.id, name: SOURCES[i]!.name, ok: false, ms: 0, error: '探测异常' },
-  );
+  return results.map((r, i) => {
+    const src = SOURCES[i]!;
+    const base =
+      r.status === 'fulfilled'
+        ? r.value
+        : { id: src.id, name: src.name, ok: false, ms: 0, error: '探测异常' };
+    if (base.ok) noteOk(src.id);
+    else noteFail(src.id);
+    return { ...base, disabled: isSourceDisabled(src.id) };
+  });
 }
 
 /* ---------------- 分类探测（带缓存） ---------------- */
@@ -289,12 +374,17 @@ export async function getCategories(force = false): Promise<CategoryCache> {
 
   categoryInflight = (async () => {
     const bySource: Record<string, maccms.CategoryInfo[]> = {};
+    const targets = activeSources();
     const results = await Promise.allSettled(
-      SOURCES.map(async (src) => ({ id: src.id, cats: await maccms.discoverCategories(src) })),
+      targets.map(async (src) => ({ id: src.id, cats: await maccms.discoverCategories(src) })),
     );
-    for (const r of results) {
+    for (let i = 0; i < results.length; i++) {
+      const r = results[i]!;
       if (r.status === 'fulfilled') {
+        noteOk(r.value.id);
         bySource[r.value.id] = r.value.cats;
+      } else {
+        noteFail(targets[i]!.id);
       }
     }
     categoryCache = { at: Date.now(), bySource };

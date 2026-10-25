@@ -3,6 +3,10 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
+  buildSiteListPath,
+  findPreset,
+  isSiteChannel,
+  isValidLineFilter,
   parseBanner,
   parseBoxData,
   parseCards,
@@ -11,6 +15,7 @@ import {
   parseFilters,
   parseMaxPage,
   parseSeqId,
+  SITE_PRESETS,
   toPlaySrc,
 } from '../src/dyrssite.js';
 
@@ -178,5 +183,92 @@ describe('云盘分享源（/api/drive/list）', () => {
     expect(box.imdbId).toBe('tt1234567');
     expect(box.cdnBase).toBe('https://box.dyrs.com.de');
     expect(parseBoxData('<html></html>')).toEqual({ boxName: '', imdbId: '', cdnBase: '' });
+  });
+});
+
+/**
+ * 渠道打通：列表查询参数与预设频道。
+ *
+ * 这几条锁的是「上游有、但我们以前丢掉」的筛选轴 —— 2026-10-25 从 viprs3.cc
+ * 的 7 行筛选栏实测出来的参数名，别凭印象改。
+ */
+describe('列表查询参数（渠道打通）', () => {
+  it('基础路径：/{ch}.html，页码 0 不写进 query', () => {
+    expect(buildSiteListPath({ ch: 'dianying' })).toBe('/dianying.html');
+    expect(buildSiteListPath({ ch: 'dianying', page: 0 })).toBe('/dianying.html');
+    expect(buildSiteListPath({ ch: 'dianying', page: 3 })).toBe('/dianying.html?page=3');
+  });
+
+  it('四个基础筛选轴原样透传（class/area/year/sort_field）', () => {
+    const p = buildSiteListPath({ ch: 'dianshiju', class: '剧情', area: '美国', year: '2025', sortField: 'play_hot' });
+    const u = new URL(p, 'https://x.local');
+    expect(u.pathname).toBe('/dianshiju.html');
+    expect(u.searchParams.get('class')).toBe('剧情');
+    expect(u.searchParams.get('area')).toBe('美国');
+    expect(u.searchParams.get('year')).toBe('2025');
+    expect(u.searchParams.get('sort_field')).toBe('play_hot');
+  });
+
+  it('线路筛选：我们的 line 必须落成上游的 origin', () => {
+    const u = new URL(buildSiteListPath({ ch: 'dianying', line: '王者TV蓝光' }), 'https://x.local');
+    expect(u.searchParams.get('origin')).toBe('王者TV蓝光');
+    expect(u.searchParams.has('line')).toBe(false);
+  });
+
+  it('文艺片 ban / 排除 exclude 映射到上游的两条参数', () => {
+    expect(new URL(buildSiteListPath({ ch: 'dianying', ban: true }), 'https://x.local').searchParams.get('ban')).toBe('true');
+    expect(new URL(buildSiteListPath({ ch: 'dianying', exclude: 'his' }), 'https://x.local').searchParams.get('exclude_his')).toBe('true');
+    expect(new URL(buildSiteListPath({ ch: 'dianying', exclude: 'unlike' }), 'https://x.local').searchParams.get('exclude_unlike')).toBe('true');
+  });
+
+  it('非法 line 值被丢弃，不会拼进上游 URL', () => {
+    const evil = 'x&page=99';
+    expect(isValidLineFilter(evil)).toBe(false);
+    const u = new URL(buildSiteListPath({ ch: 'dianying', line: evil }), 'https://x.local');
+    expect(u.searchParams.has('origin')).toBe(false);
+    expect(u.searchParams.has('page')).toBe(false);
+  });
+
+  it('line 白名单：中文线路名与英文线路名都允许', () => {
+    for (const v of ['王者TV蓝光', '超级线路', 'bfzym3u8', 'lzm3u8', '1080zyk']) {
+      expect(isValidLineFilter(v)).toBe(true);
+    }
+    for (const v of ['', 'a'.repeat(33), 'a/b', 'a?b', 'a#b']) {
+      expect(isValidLineFilter(v)).toBe(false);
+    }
+  });
+
+  it('频道白名单只认 5 个真实频道', () => {
+    expect(isSiteChannel('dianying')).toBe(true);
+    expect(isSiteChannel('duanju')).toBe(true);
+    expect(isSiteChannel('doc')).toBe(false);
+    expect(isSiteChannel('../etc/passwd')).toBe(false);
+  });
+});
+
+describe('预设频道', () => {
+  it('三个预设：纪录片 / 蓝光 / 美剧，各自落成合法筛选', () => {
+    expect(SITE_PRESETS.map((p) => p.key)).toEqual(['doc', 'bluray', 'us']);
+
+    const doc = findPreset('doc')!;
+    expect(doc.ch).toBe('dianying');
+    expect(new URL(buildSiteListPath({ ch: doc.ch, ...doc.params }), 'https://x.local').searchParams.get('class')).toBe('纪录片');
+
+    const bluray = findPreset('bluray')!;
+    expect(new URL(buildSiteListPath({ ch: bluray.ch, ...bluray.params }), 'https://x.local').searchParams.get('origin')).toBe('王者TV蓝光');
+
+    const us = findPreset('us')!;
+    expect(us.ch).toBe('dianshiju');
+    expect(new URL(buildSiteListPath({ ch: us.ch, ...us.params }), 'https://x.local').searchParams.get('area')).toBe('美国');
+  });
+
+  it('预设 key 不能和真实频道重名（否则频道选择会歧义）', () => {
+    for (const p of SITE_PRESETS) {
+      expect(isSiteChannel(p.key)).toBe(false);
+    }
+  });
+
+  it('未知 key 返回 undefined', () => {
+    expect(findPreset('nope')).toBeUndefined();
   });
 });

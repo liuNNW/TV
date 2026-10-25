@@ -18,42 +18,64 @@ const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
  * 12s 会把「只是慢」误报成失败（前端看到的是 "This operation was aborted"）。
  */
 const FETCH_TIMEOUT = 18_000;
-/* ---------------- 线路选择（探活缓存） ---------------- */
-let activeLine = null;
-const LINE_TTL_MS = 10 * 60_000;
-/** 挑一条可用线路：优先缓存，其次探活，最后兜底 */
-export async function pickLine(force = false) {
-    if (!force && activeLine && Date.now() - activeLine.at < LINE_TTL_MS) {
-        return activeLine.line;
+/* ---------------- 线路池（多镜像 + 失败自动切换） ---------------- */
+/**
+ * 打头的三条优先线路。
+ *
+ * 34 条镜像指向**同一份内容库**（2026-10-25 实测：viprs3.cc / dyrsok.cc / tvcang.com /
+ * viprs1.cc 的 `/dianying.html` 前 6 个视频 id 完全一致，只有站名不同：
+ * 美剧天堂 / 电影人生 / TV仓），所以这里挑的是**延迟与稳定性**，不是内容增量。
+ * 这三条实测响应最快、也最少被反爬拦下。
+ */
+const PREFERRED_LINES = ['https://viprs3.cc', 'https://tvcang.com', 'https://dyrsok.cc'];
+/**
+ * 一次请求最多试几条线路。
+ * 再多没有边际收益，只会把「上游真的挂了」这件事拖成几十秒的等待。
+ */
+const POOL_TRY_MAX = 3;
+let activePool = null;
+const POOL_TTL_MS = 10 * 60_000;
+/** 构建线路池：优先线路 → 兜底线路 → 线路发现接口给的其余镜像 */
+async function linePool(force = false) {
+    if (!force && activePool && Date.now() - activePool.at < POOL_TTL_MS) {
+        return activePool.lines;
     }
     let lines = [];
     try {
         lines = await listLines();
     }
     catch {
-        // 忽略，走兜底
+        // 线路发现接口本身挂了就用本地兜底，不影响站点可用
     }
-    const candidates = [DEFAULT_LINE, ...lines.filter((l) => l !== DEFAULT_LINE)];
-    // 并发探前 6 条，选第一条真正能取到页面的。
-    // 注意：必须走 fetchRaw 而不是裸 fetch —— 上游会给「正在检测」挑战页（HTTP 429），
-    // 裸 fetch 会把「线路是活的但被挑战」误判成不可用，于是永远退回第一条。
-    const probe = await Promise.all(candidates.slice(0, 6).map(async (line) => {
-        try {
-            const r = await fetchRaw(`${line}/dianying.html`, line, 'text/html,*/*', 6000);
-            const ok = r.status === 200 && r.body.length > 10_000 && !isChallengePage(r.body.toString('utf8'));
-            return { line, ok };
-        }
-        catch {
-            return { line, ok: false };
-        }
-    }));
-    const ok = probe.find((p) => p.ok);
-    const chosen = ok?.line ?? candidates[0];
-    activeLine = { line: chosen, at: Date.now() };
-    return chosen;
+    const seen = new Set();
+    const pool = [];
+    for (const raw of [...PREFERRED_LINES, DEFAULT_LINE, ...lines]) {
+        const v = String(raw || '').trim().replace(/\/+$/, '');
+        if (!v || seen.has(v))
+            continue;
+        seen.add(v);
+        pool.push(v);
+    }
+    activePool = { lines: pool, at: Date.now() };
+    return pool;
+}
+/** 挑一条可用线路：池首。探活与换线交给 fetchWithPool。 */
+export async function pickLine(force = false) {
+    const pool = await linePool(force);
+    return pool[0] ?? DEFAULT_LINE;
 }
 export function resetSiteLineCache() {
-    activeLine = null;
+    activePool = null;
+}
+/** 成功过的线路提到池首，后续 10 分钟直接用，不再从头上试 */
+function promoteLine(base) {
+    if (!activePool)
+        return;
+    const i = activePool.lines.indexOf(base);
+    if (i > 0) {
+        activePool.lines.splice(i, 1);
+        activePool.lines.unshift(base);
+    }
 }
 const sessions = new Map();
 /** key 实测长期稳定，给 6 小时；真的失效了下一轮会重新解题 */
@@ -146,34 +168,88 @@ async function fetchRaw(url, base, accept, timeoutMs = FETCH_TIMEOUT) {
     }
     return last;
 }
+/**
+ * 带线路池的抓取：沿着池顺序试，第一条真正拿到「非挑战页的 200」就用它，
+ * 并把它提到池首。三条都失败才返回最后一次结果（上层照旧按状态码报错）。
+ *
+ * 之前是「单条全局线路」：一旦挑中一条抽风的镜像，整个影视仓在 10 分钟内
+ * 全站变慢/报错，没有任何兜底。34 条镜像本来就是为了冗余存在的。
+ */
+async function fetchWithPool(path, accept, timeoutMs = FETCH_TIMEOUT) {
+    const pool = await linePool();
+    const tries = pool.slice(0, POOL_TRY_MAX);
+    let last = null;
+    for (const base of tries) {
+        const url = path.startsWith('http') ? path : `${base}${path}`;
+        try {
+            const raw = await fetchRaw(url, base, accept, timeoutMs);
+            const ok = raw.status === 200 && !isChallengePage(raw.body.toString('utf8'));
+            if (ok) {
+                promoteLine(base);
+                return { raw, base };
+            }
+            last = { raw, base };
+        }
+        catch {
+            // 这条不通，换下一条
+        }
+    }
+    if (last)
+        return last;
+    const base = tries[0] ?? DEFAULT_LINE;
+    const url = path.startsWith('http') ? path : `${base}${path}`;
+    return { raw: { status: 0, contentType: '', body: Buffer.alloc(0), finalUrl: url }, base };
+}
 const pageCache = new Map();
 const PAGE_TTL_MS = 5 * 60_000;
 const PAGE_CACHE_MAX = 120;
-/** 抓一个站点路径（以 / 开头），带 5 分钟缓存 */
+/**
+ * 写页面缓存（只缓存真正拿到的正常页面）。
+ *
+ * 键用**路径**而不是完整地址：34 条镜像内容一致，按路径缓存才能在
+ * 「这次走 A 镜像、下次走 B 镜像」时仍然命中，不至于换条线路就全 miss。
+ */
+function cachePage(path, status, data) {
+    if (!(status === 200 && data.html.length > 1000) || isChallengePage(data.html))
+        return;
+    if (pageCache.size >= PAGE_CACHE_MAX) {
+        let oldestKey = '';
+        let oldest = Infinity;
+        for (const [k, v] of pageCache) {
+            if (v.at < oldest) {
+                oldest = v.at;
+                oldestKey = k;
+            }
+        }
+        if (oldestKey)
+            pageCache.delete(oldestKey);
+    }
+    pageCache.set(path, { at: Date.now(), data });
+}
+/**
+ * 抓一个站点路径（以 / 开头），带 5 分钟缓存。
+ *
+ * 不传 line 时走线路池（失败自动换镜像）；传了 line 就固定用那条
+ * （详情页复用同一线路抓 N 次选集时，避免每次都在池里重新探）。
+ */
 export async function fetchSitePage(path, line) {
-    const base = line ?? (await pickLine());
-    const url = path.startsWith('http') ? path : `${base}${path}`;
-    const hit = pageCache.get(url);
+    const hit = pageCache.get(path);
     if (hit && Date.now() - hit.at < PAGE_TTL_MS)
         return hit.data;
-    const r = await fetchRaw(url, base, 'text/html,*/*');
-    const data = { status: r.status, html: r.body.toString('utf8'), finalUrl: r.finalUrl };
-    if (r.status === 200 && data.html.length > 1000 && !isChallengePage(data.html)) {
-        if (pageCache.size >= PAGE_CACHE_MAX) {
-            // 淘汰最老的一条
-            let oldestKey = '';
-            let oldest = Infinity;
-            for (const [k, v] of pageCache) {
-                if (v.at < oldest) {
-                    oldest = v.at;
-                    oldestKey = k;
-                }
-            }
-            if (oldestKey)
-                pageCache.delete(oldestKey);
-        }
-        pageCache.set(url, { at: Date.now(), data });
+    if (line) {
+        const url = path.startsWith('http') ? path : `${line}${path}`;
+        const r = await fetchRaw(url, line, 'text/html,*/*');
+        const data = { status: r.status, html: r.body.toString('utf8'), finalUrl: r.finalUrl };
+        cachePage(path, r.status, data);
+        return data;
     }
+    const { raw } = await fetchWithPool(path, 'text/html,*/*');
+    const data = {
+        status: raw.status,
+        html: raw.body.toString('utf8'),
+        finalUrl: raw.finalUrl,
+    };
+    cachePage(path, raw.status, data);
     return data;
 }
 export function resetSitePageCache() {
@@ -206,10 +282,13 @@ function solveChallenge(html) {
  * 别的页面没解，才出现「一被挑战整站 429」）。
  */
 export async function fetchSearchPage(wd, line) {
-    const base = line ?? (await pickLine());
-    const url = `${base}/s.html?encode=off&name=${encodeURIComponent(wd)}`;
-    const r = await fetchRaw(url, base, 'text/html,*/*');
-    return { status: r.status, html: r.body.toString('utf8'), finalUrl: r.finalUrl };
+    const path = `/s.html?encode=off&name=${encodeURIComponent(wd)}`;
+    if (line) {
+        const r = await fetchRaw(`${line}${path}`, line, 'text/html,*/*');
+        return { status: r.status, html: r.body.toString('utf8'), finalUrl: r.finalUrl };
+    }
+    const { raw } = await fetchWithPool(path, 'text/html,*/*');
+    return { status: raw.status, html: raw.body.toString('utf8'), finalUrl: raw.finalUrl };
 }
 /** @deprecated 保留旧名字，等价于 resetSiteSessions() */
 export function resetChallengeCache() {
@@ -350,6 +429,133 @@ export function parseMaxPage(html) {
     }
     return max;
 }
+/* ---------------- 列表查询参数（渠道打通） ---------------- */
+/** 上游真实存在的 5 个频道（对应 `/{ch}.html` 页面） */
+export const SITE_CHANNELS = ['dianying', 'dianshiju', 'zongyi', 'dongman', 'duanju'];
+export function isSiteChannel(v) {
+    return SITE_CHANNELS.includes(v);
+}
+/**
+ * 线路筛选值白名单校验。
+ *
+ * 上游 `origin` 是自由文本（实测有 `王者TV蓝光` `超级线路` `bfzym3u8` 这类），
+ * 但它会被原样拼进上游 URL，所以只放行中英文/数字/空格/点/横线，长度 1~32。
+ * 不合法的值直接丢弃（当作没传），不报错也不透传。
+ */
+export function isValidLineFilter(v) {
+    return /^[\u4e00-\u9fa5A-Za-z0-9._\- ]{1,32}$/.test(v);
+}
+/** 拼上游列表页路径（只接受已知频道，避免把用户输入拼进 URL 路径） */
+export function buildSiteListPath(q) {
+    const u = new URL(`/${q.ch}.html`, 'https://placeholder.local');
+    if (q.class)
+        u.searchParams.set('class', q.class);
+    if (q.area)
+        u.searchParams.set('area', q.area);
+    if (q.year)
+        u.searchParams.set('year', q.year);
+    if (q.sortField)
+        u.searchParams.set('sort_field', q.sortField);
+    if (q.line && isValidLineFilter(q.line))
+        u.searchParams.set('origin', q.line);
+    if (q.ban)
+        u.searchParams.set('ban', 'true');
+    if (q.exclude === 'his')
+        u.searchParams.set('exclude_his', 'true');
+    if (q.exclude === 'unlike')
+        u.searchParams.set('exclude_unlike', 'true');
+    const page = Number(q.page);
+    if (Number.isFinite(page) && page > 0)
+        u.searchParams.set('page', String(page));
+    return `${u.pathname}${u.search}`;
+}
+export const SITE_PRESETS = [
+    // 纪录片：上游「高级」行里就是 `class=纪录片`
+    { key: 'doc', name: '纪录片', ch: 'dianying', params: { class: '纪录片' } },
+    // 蓝光：上游首页导航「蓝光电影」= `?origin=王者TV蓝光`，实测单页 24 部、无分页
+    { key: 'bluray', name: '蓝光', ch: 'dianying', params: { line: '王者TV蓝光' } },
+    // 美剧：上游没有独立频道，用「电视剧 + 地区=美国」这个组合
+    { key: 'us', name: '美剧', ch: 'dianshiju', params: { area: '美国' } },
+];
+export function findPreset(key) {
+    return SITE_PRESETS.find((p) => p.key === key);
+}
+/** 从详情页里抠 `var box_data={...}` */
+export function parseBoxData(html) {
+    const block = html.match(/box_data\s*=\s*\{([\s\S]*?)\}/);
+    const empty = { boxName: '', imdbId: '', cdnBase: '' };
+    if (!block)
+        return empty;
+    const field = (key) => {
+        const m = block[1].match(new RegExp(`${key}\\s*:\\s*["']([^"']*)["']`));
+        return m ? decodeEntities(m[1]) : '';
+    };
+    return { boxName: field('name'), imdbId: field('imdb_id'), cdnBase: field('url') };
+}
+/**
+ * 解析 /api/drive/list 的 JSON。
+ *
+ * 上游无结果时返回 `null`（不是空数组），这里统一成空数组。
+ * 字段做防御性读取：只保留有 filename 的条目，url 缺失时退回 share_url。
+ */
+export function parseDriveItems(text) {
+    let raw;
+    try {
+        raw = JSON.parse(text);
+    }
+    catch {
+        return [];
+    }
+    if (!Array.isArray(raw))
+        return [];
+    const items = [];
+    for (const x of raw) {
+        if (!x || typeof x !== 'object')
+            continue;
+        const o = x;
+        const filename = String(o.filename ?? '').trim();
+        if (!filename)
+            continue;
+        const url = String(o.url ?? o.share_url ?? '').trim();
+        if (!url)
+            continue;
+        items.push({
+            origin: String(o.origin ?? '').trim() || '未知网盘',
+            filename,
+            url,
+            pwd: String(o.pwd ?? '').trim(),
+        });
+    }
+    // 上游前端也是百度优先、阿里其次
+    const weight = { baidu: 100, ali: 90, aliyundrive: 90 };
+    return items.sort((a, b) => (weight[b.origin] ?? 0) - (weight[a.origin] ?? 0));
+}
+/** 云盘列表缓存：key = 查询词（imdb 或片名） */
+const driveCache = new Map();
+const DRIVE_TTL_MS = 30 * 60_000;
+const DRIVE_CACHE_MAX = 300;
+/**
+ * 查云盘分享资源。上游没有结果时返回空数组。
+ * 走 fetchRaw 是为了吃到「挑战自愈」：这个接口同样会被 429 检测页拦。
+ */
+export async function fetchDriveList(query) {
+    const key = query.trim();
+    if (!key)
+        return [];
+    const hit = driveCache.get(key);
+    if (hit && Date.now() - hit.at < DRIVE_TTL_MS)
+        return hit.items;
+    const base = await pickLine();
+    const url = `${base}/api/drive/list?name=${encodeURIComponent(key)}`;
+    const r = await fetchRaw(url, base, 'application/json,*/*', 12_000);
+    if (r.status !== 200)
+        return [];
+    const items = parseDriveItems(r.body.toString('utf8'));
+    if (driveCache.size >= DRIVE_CACHE_MAX)
+        driveCache.clear();
+    driveCache.set(key, { at: Date.now(), items });
+    return items;
+}
 /**
  * 从详情页里抠出 seqlist 编号。
  *
@@ -379,6 +585,7 @@ function parseJsonLd(html) {
 /** 解析详情页 */
 export function parseDetail(html, id = '', kind = '') {
     const ld = parseJsonLd(html);
+    const box = parseBoxData(html);
     // og 元信息
     const og = (prop) => {
         const m = html.match(new RegExp(`property="og:${prop}" content="([^"]*)"`));
@@ -458,6 +665,9 @@ export function parseDetail(html, id = '', kind = '') {
         area: String(ld?.countryOfOrigin ?? ''),
         language: String(ld?.inLanguage ?? ''),
         extra,
+        boxName: box.boxName,
+        imdbId: box.imdbId,
+        cdnBase: box.cdnBase,
         seq: parseSeqId(html),
         origins: [...origins.values()],
     };

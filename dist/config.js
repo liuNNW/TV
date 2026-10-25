@@ -11,19 +11,9 @@ export const SOURCES = [
         base: 'https://cj.lziapi.com/api.php/provide/vod/',
     },
     {
-        id: 'wujinapi',
-        name: '无尽资源',
-        base: 'https://api.wujinapi.me/api.php/provide/vod/',
-    },
-    {
         id: 'ffzy',
         name: '非凡资源',
         base: 'https://cj.ffzyapi.com/api.php/provide/vod/',
-    },
-    {
-        id: 'bfzy',
-        name: '暴风资源',
-        base: 'https://bfzyapi.com/api.php/provide/vod/',
     },
     {
         id: 'tyyszy',
@@ -46,11 +36,6 @@ export const SOURCES = [
         base: 'https://hongniuzy3.com/api.php/provide/vod/',
     },
     {
-        id: 'mdzy',
-        name: '魔都资源',
-        base: 'https://www.mdzyapi.com/api.php/provide/vod/',
-    },
-    {
         id: 'jinying',
         name: '金鹰资源',
         base: 'http://jyzyapi.com/api.php/provide/vod/',
@@ -60,8 +45,11 @@ export const SOURCES = [
         name: '电影天堂',
         base: 'http://caiji.dyttzyapi.com/api.php/provide/vod/',
     },
-    // 2026-10 实测验证后加入：闪电 / 红牛(hongniuzy3) / 魔都 / 金鹰 / 电影天堂。
-    // 同期实测不可用（连接失败或返回 JS 挑战页），勿重复尝试：
+    // 2026-10-25 复测（ac=list，14s 超时）：8 个源 200，3 个超时不可达，已移出数组。
+    //   ✗ wujinapi（api.wujinapi.me）  ✗ bfzy（bfzyapi.com）  ✗ mdzy（www.mdzyapi.com）
+    // 想看它们回没回来，跑 `node scripts/source-probe.mjs --maccms <地址>` 即可，别手工试。
+    //
+    // 历史结论（2026-10 首轮探测）：同期实测不可用（连接失败或返回 JS 挑战页），勿重复尝试：
     //   collect.wolongzyw.com（Cloudflare 挑战）、www.hongniuzy2.com、
     //   api.guangsuapi.com、caiji.dbzy.tv、caiji.moduapi.cc、jinyingzy.com、
     //   api.wujinapi.com、feisuzy.com、api.ukuapi88.com、p2100.net、
@@ -99,7 +87,9 @@ export const TYPE_MAP = {
 export const CHANNEL_ORDER = [
     '电影',
     '电视剧',
+    '短剧',
     '综艺',
+    '纪录片',
     '动漫',
     '体育',
     '解说',

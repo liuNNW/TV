@@ -43,6 +43,20 @@ describe('classifyChannel', () => {
     expect(classifyChannel('电影解说')).toBe('解说');
   });
 
+  it('短剧类（不能被「以剧结尾 → 电视剧」吞掉）', () => {
+    expect(classifyChannel('短剧')).toBe('短剧');
+    expect(classifyChannel('微短剧')).toBe('短剧');
+    expect(classifyChannel('竖屏剧')).toBe('短剧');
+    expect(classifyChannel('小程序短剧')).toBe('短剧');
+  });
+
+  it('纪录片类（「纪录」不是「记录」，记录片仍是电影）', () => {
+    expect(classifyChannel('纪录片')).toBe('纪录片');
+    expect(classifyChannel('记录片')).toBe('电影');
+    expect(classifyChannel('纪实')).toBe('纪录片');
+    expect(classifyChannel('BBC纪录片')).toBe('纪录片');
+  });
+
   it('含「剧」但以「片」结尾的仍是电影（喜剧片/剧情片 不是电视剧）', () => {
     expect(classifyChannel('喜剧片')).toBe('电影');
     expect(classifyChannel('剧情片')).toBe('电影');
@@ -60,7 +74,13 @@ describe('channelRank', () => {
   it('按 CHANNEL_ORDER 排序', () => {
     expect(channelRank('电影')).toBe(0);
     expect(channelRank('电视剧')).toBe(1);
+    expect(channelRank('短剧')).toBe(2);
     expect(channelRank('未知')).toBeGreaterThan(channelRank('体育'));
+  });
+
+  it('新频道排在「其他」前面（其他永远是兜底）', () => {
+    expect(channelRank('短剧')).toBeLessThan(channelRank('其他'));
+    expect(channelRank('纪录片')).toBeLessThan(channelRank('其他'));
   });
 });
 

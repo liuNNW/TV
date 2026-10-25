@@ -34,6 +34,19 @@
 }
 .dw-filter a:hover { background: var(--bg-3); color: var(--text); }
 .dw-filter a.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* 预设频道（纪录片 / 蓝光 / 美剧）不是上游的独立频道，用虚线描边区分，避免误导 */
+.lines button.preset {
+  border: 1px dashed var(--accent);
+  color: var(--accent);
+  background: transparent;
+}
+.lines button.preset:hover { background: var(--bg-3); }
+.lines button.preset.active {
+  border-style: solid;
+  background: var(--accent);
+  color: #fff;
+}
 </style>
 </head>
 <body>
@@ -66,13 +79,31 @@ let page = Math.max(0, Number(params.get('page')) || 0);
 
 mountTopbar('dyrs.html');
 
+/**
+ * 频道条：5 个上游真实频道 + 3 个「预设筛选」入口。
+ *
+ * 预设不是上游真有这个频道，而是把它的稳定筛选组合提上来（后端 SITE_PRESETS 同源）：
+ *   纪录片 = 电影 + class=纪录片 · 蓝光 = 电影 + origin=王者TV蓝光 · 美剧 = 电视剧 + area=美国
+ * 首页接口会带回权威清单（r.channels），回来后就地覆盖，避免两边各维护一份。
+ */
 const CHANNELS = [
-  ['dianying', '电影'],
-  ['dianshiju', '电视剧'],
-  ['zongyi', '综艺'],
-  ['dongman', '动漫'],
-  ['duanju', '短剧'],
+  ['dianying', '电影', false],
+  ['dianshiju', '电视剧', false],
+  ['zongyi', '综艺', false],
+  ['dongman', '动漫', false],
+  ['duanju', '短剧', false],
+  ['doc', '纪录片', true],
+  ['bluray', '蓝光', true],
+  ['us', '美剧', true],
 ];
+
+/** 会被透传给上游列表接口的筛选参数（与后端 buildSiteListPath 对齐） */
+const FILTER_KEYS = ['class', 'area', 'year', 'sort_field', 'line', 'ban', 'exclude'];
+
+function channelName(key) {
+  const hit = CHANNELS.find((c) => c[0] === key);
+  return hit ? hit[1] : key;
+}
 
 const content = document.getElementById('content');
 const pager = document.getElementById('pager');
@@ -125,9 +156,11 @@ function renderCard(item) {
 }
 
 function renderCatRow() {
-  catBox.innerHTML = CHANNELS.map(([c, n]) => {
+  catBox.innerHTML = CHANNELS.map(([c, n, preset]) => {
     const active = c === channel ? ' active' : '';
-    return `<button class="${active}" onclick="goChannel('${c}')">${n}</button>`;
+    const cls = preset ? ` preset${active}` : active;
+    // 预设项加个描边，视觉上和真实频道区分开
+    return `<button class="${cls.trim()}" title="${preset ? '筛选组合入口' : ''}" onclick="goChannel('${c}')">${n}</button>`;
   }).join('');
 }
 
@@ -138,6 +171,21 @@ function filterHref(href) {
     const ch = (u.pathname.match(/^\/([a-z]+)\.html$/) || [])[1] || channel;
     const q = new URLSearchParams(u.search);
     q.delete('page');
+    // 上游的 `origin`（线路筛选）换成我们的 `line`：我们 API 里 origin 已经是「线路」的语义
+    const line = q.get('origin');
+    if (line) {
+      q.delete('origin');
+      q.set('line', line);
+    }
+    // 上游两条排除参数合并成我们的 exclude=his|unlike
+    if (q.get('exclude_his')) {
+      q.delete('exclude_his');
+      q.set('exclude', 'his');
+    }
+    if (q.get('exclude_unlike')) {
+      q.delete('exclude_unlike');
+      q.set('exclude', 'unlike');
+    }
     q.set('ch', ch);
     return `dyrs.html?${q.toString()}`;
   } catch {
@@ -145,17 +193,35 @@ function filterHref(href) {
   }
 }
 
+/** 上游筛选参数 → 我们的参数名（`origin` 是上游的叫法，`line` 是我们的） */
+const FILTER_MAP = [
+  ['class', 'class'],
+  ['area', 'area'],
+  ['year', 'year'],
+  ['sort_field', 'sort_field'],
+  ['origin', 'line'],
+  ['ban', 'ban'],
+];
+
 /** 当前选中的筛选项（只对「带参数」的选项高亮，避免整行都亮） */
 function isActiveFilter(href) {
   try {
     const u = new URL(href, location.origin);
     let any = false;
-    for (const k of ['class', 'area', 'year', 'sort_field']) {
-      const want = u.searchParams.get(k);
-      const have = params.get(k);
-      if ((want || '') !== (have || '')) return false;
+    for (const [upKey, ourKey] of FILTER_MAP) {
+      const want = u.searchParams.get(upKey) || '';
+      const have = params.get(ourKey) || '';
+      if (want !== have) return false;
       if (want) any = true;
     }
+    // 排除类：上游是两条参数，我们统一成一个 exclude
+    const exUp = u.searchParams.get('exclude_his')
+      ? 'his'
+      : u.searchParams.get('exclude_unlike')
+        ? 'unlike'
+        : '';
+    if (exUp !== (params.get('exclude') || '')) return false;
+    if (exUp) any = true;
     return any;
   } catch {
     return false;
@@ -164,7 +230,13 @@ function isActiveFilter(href) {
 
 function renderFilters(filters) {
   if (!filters || filters.length === 0) { filterBox.innerHTML = ''; return; }
-  filterBox.innerHTML = filters.map((row) => {
+  /*
+   * 「排除」行（已观看 / 不想看）是上游给登录用户准备的：
+   * 我们全程匿名抓页面，没有观看历史可排除，实测带上 exclude_his 结果完全不变。
+   * 与其摆两个点了没反应的按钮，不如不渲染。
+   */
+  const rows = filters.filter((row) => row.label !== '排除');
+  filterBox.innerHTML = rows.map((row) => {
     const opts = (row.options || []).map((o) => {
       const href = filterHref(o.href);
       const active = isActiveFilter(o.href) ? ' class="active"' : '';
@@ -209,10 +281,10 @@ async function load() {
 
     /* 分类列表 */
     if (channel) {
-      const name = (CHANNELS.find((c) => c[0] === channel) || ['', channel])[1];
+      const name = channelName(channel);
       headTitle.textContent = `影视仓 · ${name}`;
       const q = new URLSearchParams();
-      for (const k of ['class', 'area', 'year', 'sort_field']) {
+      for (const k of FILTER_KEYS) {
         const v = params.get(k);
         if (v) q.set(k, v);
       }
@@ -223,11 +295,17 @@ async function load() {
       if (token !== renderToken) return;
 
       const cards = r.cards || [];
-      hint.textContent = `第 ${r.page + 1} / ${r.maxPage + 1} 页`;
+      hint.textContent = r.maxPage > 0 ? `第 ${r.page + 1} / ${r.maxPage + 1} 页` : '';
       renderFilters(r.filters);
-      content.innerHTML = cards.length
-        ? `<div class="grid">${cards.map(renderCard).join('')}</div>`
-        : '<div class="state">这一页没有内容</div>';
+      if (cards.length) {
+        content.innerHTML = `<div class="grid">${cards.map(renderCard).join('')}</div>`;
+      } else if (r.empty) {
+        // 预设频道（纪录片/蓝光）内容本来就少，空结果不是错误
+        content.innerHTML = `<div class="state"><div class="big">🗂</div>「${esc(name)}」这个筛选下暂时没有内容
+          <div style="margin-top:12px"><button onclick="goChannel('dianying')">回电影频道</button></div></div>`;
+      } else {
+        content.innerHTML = '<div class="state">这一页没有内容</div>';
+      }
       renderPager(r.page, r.maxPage);
       return;
     }
@@ -237,6 +315,12 @@ async function load() {
     hint.textContent = '';
     const r = await api('/dyrs/site/home');
     if (token !== renderToken) return;
+
+    // 后端返回权威频道清单时同步过来，避免前后端各维护一份频道表
+    if (Array.isArray(r.channels) && r.channels.length) {
+      CHANNELS.splice(0, CHANNELS.length, ...r.channels.map((c) => [c.key, c.name, !!c.preset]));
+      renderCatRow();
+    }
 
     let html = '';
     const banner = (r.banner || []).slice(0, 10);
@@ -269,7 +353,7 @@ function goChannel(c) {
 function goPage(n) {
   if (n < 0) return;
   const q = new URLSearchParams();
-  for (const k of ['class', 'area', 'year', 'sort_field']) {
+  for (const k of FILTER_KEYS) {
     const v = params.get(k);
     if (v) q.set(k, v);
   }

@@ -111,7 +111,8 @@ npm run dev        # tsx watch 热重载
 | 功能 | 说明 |
 |---|---|
 | 搜索 | 按片名搜，可搜演员，多源同时搜并合并结果 |
-| **影视仓** | 顶栏独立入口（`dyrs.html`），接的是 dyrs.me 那套站点的片源：首页热播 + 五频道、分类筛选 + 分页、搜索。详情页列出**全部线路**（按「上游直接给真实 m3u8」优先排序）与选集，点播复用老播放页（`play.html?source=dyrs`）。**老界面与 macCMS 播放链路完全不受影响** |
+| **影视仓** | 顶栏独立入口（`dyrs.html`），接的是 dyrs.me 那套站点的片源：首页热播 + 分类筛选 + 分页 + 搜索。频道条有 **8 个入口**：5 个上游真实频道（电影/电视剧/综艺/动漫/短剧）+ 3 个**预设筛选**（纪录片 / 蓝光 / 美剧，界面用虚线描边区分）。筛选支持分类·地区·年份·排序·线路(蓝光)·文艺片。详情页列出**全部线路**（按「上游直接给真实 m3u8」优先排序）与选集，点播复用老播放页（`play.html?source=dyrs`）。**老界面与 macCMS 播放链路完全不受影响** |
+| **多镜像线路池** | 影视仓背后是 34 条同库镜像。不做「单点线路」，而是候选池最多试 3 条、失败自动换、成功的提到池首，缓存按路径而不是完整地址（换镜像仍命中） |
 | 自绘播放器 | 优酷/腾讯风格控制栏：缓冲进度条+时间气泡+拖拽圆点、快退/快进 10 秒、倍速、音量、画中画、全屏、自动隐藏、双击全屏 |
 | 广告剔除 | 服务端清洗 m3u8（异域名/编号断接/广告特征），播放器内提示「已自动跳过 N 个广告片段」。**只在服务端链路（`/api/hls`、`/api/proxy`）生效**；客户端直连 CDN 时请求不经过服务器，不含广告过滤。重建列表时保留上游的 `TARGETDURATION` / `MEDIA-SEQUENCE` 等全局标签 |
 | 频道分层 | 电影 / 电视剧 / 综艺 / 动漫 / 体育 / 解说，不把全部分类平铺 |
@@ -165,15 +166,23 @@ npm run dev        # tsx watch 热重载
 
 ```ts
 export const SOURCES: SourceConfig[] = [
-  { id: 'lziapi',   name: '量子资源', base: 'https://cj.lziapi.com/api.php/provide/vod/' },
-  { id: 'wujinapi', name: '无尽资源', base: 'https://api.wujinapi.me/api.php/provide/vod/' },
+  { id: 'lziapi', name: '量子资源', base: 'https://cj.lziapi.com/api.php/provide/vod/' },
+  { id: 'ffzy',   name: '非凡资源', base: 'https://cj.ffzyapi.com/api.php/provide/vod/' },
   // 加在这里
 ];
 ```
 
 要求是标准的 macCMS 采集接口（`?ac=list` / `?ac=detail`）。
 
-某个源挂了会自动跳过（`/api/health` 能看到状态），不会影响其他源。
+**加之前先探一下**，别把死源写进配置：
+
+```bash
+node scripts/source-probe.mjs --maccms https://某个站/api.php/provide/vod/
+```
+
+它会给状态码 / 耗时 / 条数 / `total`，活着的还会直接打印**可粘贴的 `SOURCES` 片段**。
+
+某个源挂了会自动跳过（`/api/health` 能看到状态），连续 3 次失败会被熔断 10 分钟后自动重试，不会影响其他源。
 
 ---
 
@@ -186,13 +195,18 @@ export const SOURCES: SourceConfig[] = [
 含 动漫/动画/番剧…            → 动漫
 含 综艺/真人秀/脱口秀…         → 综艺
 含 解说/速看/盘点…            → 解说
+含 短剧/微短剧/竖屏剧…         → 短剧
+含 纪录/纪实/BBC…             → 纪录片
 以「片」结尾                    → 电影
 以「剧」结尾                    → 电视剧
 其余                            → 其他
 ```
 
 顺序有意义：先判专有词，最后才用「片 / 剧」结尾兜底，
-否则「喜剧片」「剧情片」会因为含「剧」字被误判成电视剧。
+否则「喜剧片」「剧情片」会因为含「剧」字被误判成电视剧，
+「短剧」也会被并进电视剧和长剧混在一起。
+
+注意「纪**录**片」和「记**录**片」是两回事：后者是采集站里的老式电影分类，结论仍是电影（单测锁着）。
 
 规则判不了的特例，在 `src/config.ts` 里加一行即可：
 
@@ -211,7 +225,7 @@ export const CHANNEL_OVERRIDES: Record<string, ChannelName> = {
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | `/api/health` | 各片源存活状态 |
+| GET | `/api/health` | 各片源存活状态（含 `disabled`：连续 3 次失败会被熔断 10 分钟） |
 | GET | `/api/search?wd=` | 搜索（多源合并） |
 | GET | `/api/channels?force=1` | **按频道分组的分类**（首页用这个） |
 | GET | `/api/categories?force=1` | 扁平分类清单 |
@@ -256,6 +270,11 @@ export const CHANNEL_OVERRIDES: Record<string, ChannelName> = {
 | GET | `/api/dyrs/cdn/ts?m3u8_id=&index=&uuid=` | 分片代理（自动跟随 302 到真实 TS），识别 PNG 占位图 |
 | GET | `/api/dyrs/direct?id=&origin=` | 直链型列表：跟随 302 到真实 TS 主机，按最终地址把相对分片名补成绝对地址 |
 | GET | `/api/dyrs/seg?u=<绝对地址>` | 真实 TS 直链透传（带 SSRF 校验，Content-Type 强制 `video/mp2t`） |
+| GET | `/api/dyrs/site/home` | 影视仓首页：`banner` + `channels`（5 真实频道 + 3 预设）+ 各条推荐 `strips` |
+| GET | `/api/dyrs/site/list?ch=&page=` | 分类列表。`ch` 接受 5 个真实频道（`dianying`/`dianshiju`/`zongyi`/`dongman`/`duanju`）**或 3 个预设**（`doc` 纪录片 / `bluray` 蓝光 / `us` 美剧）。筛选参数：`class` `area` `year` `sort_field` `line`（→ 上游 `origin`，即「只显示这条线路上有资源的片」）`ban`（文艺片）`exclude=his\|unlike`。预设入口**不分页**（上游带筛选翻页会丢筛选） |
+| GET | `/api/dyrs/site/search?wd=` | 影视仓站内搜索 |
+| GET | `/api/dyrs/site/img?id=&u=` | 影视仓封面图代理（上游要 Referer + 反爬校验，浏览器直连必 403） |
+| GET | `/api/dyrs/site/drive?name=&imdb=` | 云盘分享源（上游 `/api/drive/list`） |
 | GET | `/api/dyrs/site/detail?id=&kind=&ep=&origin=` | **影视仓详情**：不传 `origin` 会把**每条线路的选集都抓齐**（并发 3，缓存 10 分钟，带 `X-Cache`）并按「上游直接给真实 m3u8 的线路优先」排序；返回 `seq` + 每条线路的 `episodes[].src` |
 | GET | `/api/dyrs/site/play?id=&kind=&seq=&p=&origin=` | 播放信息（JSON），`src` 即本站取流地址 |
 | GET | `/api/dyrs/src?kind=&id=&seq=&p=&origin=` | **取流跳板**：302 到本站同源取流地址，给老播放器直接用 |
@@ -304,8 +323,10 @@ export const CHANNEL_OVERRIDES: Record<string, ChannelName> = {
 
 ```bash
 npm run typecheck                      # 类型检查
-npm test                               # 单元测试（59 个）
+npm test                               # 单元测试（178 个 / 12 文件）
 node scripts/acceptance.mjs            # 端到端验收（22 项）
+node scripts/source-probe.mjs --maccms <采集接口>   # 片源探测（加源前先跑这个）
+node scripts/source-probe.mjs --wzzycc <模板站地址>  # 影视仓镜像探测
 python scripts/browser-check.py        # 真实浏览器播放验证
 python scripts/browser-proxy-check.py  # 代理兜底路径验证
 ```
@@ -346,7 +367,7 @@ movie-player/
 │   ├── favorites.html  history.html
 │   ├── app.js  player.js  player-ui.js  covers.js  style.css
 │   └── vendor/hls.min.js      # 本地引入，不依赖外部 CDN
-├── scripts/                   # 验收脚本
+├── scripts/                   # 验收 / 探测脚本（source-probe.mjs 用于加源前的健康探测）
 ├── test/                      # 单元测试
 └── data/                      # 收藏/历史/封面缓存/转码产物（自动生成）
 ```

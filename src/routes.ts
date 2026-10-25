@@ -901,10 +901,14 @@ router.get('/dyrs/seg', async (req, res) => {
 /* ---------------- dyrs 站点数据（新 UI 用，抓镜像站 HTML 解析） ---------------- */
 
 import {
+  buildSiteListPath,
   fetchDriveList,
   fetchSearchPage,
   fetchSiteImage,
   fetchSitePage,
+  findPreset,
+  isSiteChannel,
+  isValidLineFilter,
   parseBanner,
   parseCards,
   parseDetail,
@@ -913,10 +917,13 @@ import {
   parsePlayPage,
   pickLine,
   resetSitePageCache,
+  SITE_CHANNELS,
+  SITE_PRESETS,
   toPlaySrc,
 } from './dyrssite.js';
 
-const DYRS_CHANNELS = ['dianying', 'dianshiju', 'zongyi', 'dongman', 'duanju'] as const;
+/** 上游真实频道（与 dyrssite.ts 的 SITE_CHANNELS 同源，避免两处各写一份） */
+const DYRS_CHANNELS = SITE_CHANNELS;
 const DYRS_KINDS = ['movie', 'tv', 'zongyi', 'duanju'] as const;
 const DYRS_CHANNEL_NAMES: Record<string, string> = {
   dianying: '电影',
@@ -925,6 +932,14 @@ const DYRS_CHANNEL_NAMES: Record<string, string> = {
   dongman: '动漫',
   duanju: '短剧',
 };
+
+/** 前端频道条：5 个真实频道 + 3 个预设筛选入口 */
+function channelBar(): { key: string; name: string; preset: boolean }[] {
+  return [
+    ...DYRS_CHANNELS.map((c) => ({ key: c as string, name: DYRS_CHANNEL_NAMES[c] ?? c, preset: false })),
+    ...SITE_PRESETS.map((p) => ({ key: p.key, name: p.name, preset: true })),
+  ];
+}
 
 /* ---------------- 影视仓：线路 → 选集（一次抓够） ---------------- */
 
@@ -1028,7 +1043,7 @@ async function loadDyrsOrigin(
 const dyrsDetailCache = new Map<string, { at: number; data: unknown }>();
 const DYRS_DETAIL_TTL_MS = 10 * 60_000;
 
-/** 首页：banner + 各频道推荐条 */
+/** 首页：banner + 各频道推荐条 + 频道条（供前端数据驱动渲染） */
 router.get('/dyrs/site/home', async (_req, res) => {
   try {
     const home = await fetchSitePage('/');
@@ -1036,8 +1051,8 @@ router.get('/dyrs/site/home', async (_req, res) => {
     const banner = parseBanner(home.html);
 
     // 各频道取第一页前 12 部（fetchSitePage 自带缓存，之后不再打上游）
-    const strips = await Promise.all(
-      DYRS_CHANNELS.map(async (ch) => {
+    const strips = await Promise.all([
+      ...DYRS_CHANNELS.map(async (ch) => {
         try {
           const r = await fetchSitePage(`/${ch}.html`);
           return { channel: ch, name: DYRS_CHANNEL_NAMES[ch], cards: parseCards(r.html).slice(0, 12) };
@@ -1045,37 +1060,85 @@ router.get('/dyrs/site/home', async (_req, res) => {
           return { channel: ch, name: DYRS_CHANNEL_NAMES[ch], cards: [] };
         }
       }),
-    );
-    res.json({ ok: true, banner, strips });
+      // 预设入口也出一条推荐条：它们就是「白捡的内容面」，藏起来太浪费
+      ...SITE_PRESETS.map(async (p) => {
+        try {
+          const r = await fetchSitePage(buildSiteListPath({ ch: p.ch, ...p.params }));
+          return { channel: p.key, name: p.name, cards: parseCards(r.html).slice(0, 12) };
+        } catch {
+          return { channel: p.key, name: p.name, cards: [] };
+        }
+      }),
+    ]);
+    // 抓不到内容的条目不展示，避免首页出现一整排空行
+    res.json({ ok: true, banner, channels: channelBar(), strips: strips.filter((s) => s.cards.length > 0) });
   } catch (e) {
     fail(res, 502, e instanceof Error ? e.message : '上游请求失败');
   }
 });
 
-/** 分类列表：/dianying.html 等 + class/area/year/sort_field/page 参数 */
+/**
+ * 分类列表：`/dianying.html` 等 + 全套筛选参数。
+ *
+ * `ch` 既接受 5 个真实频道（dianying/…），也接受 3 个预设 key（doc/bluray/us）。
+ * 筛选参数：class / area / year / sort_field / line(→上游 origin) / ban / exclude。
+ */
 router.get('/dyrs/site/list', async (req, res) => {
-  const ch = q(req, 'ch') || 'dianying';
-  if (!(DYRS_CHANNELS as readonly string[]).includes(ch)) {
-    return fail(res, 400, `频道必须是 ${DYRS_CHANNELS.join('/')}`);
+  const rawCh = (q(req, 'ch') || 'dianying').trim();
+  const preset = findPreset(rawCh);
+
+  if (!preset && !isSiteChannel(rawCh)) {
+    return fail(res, 400, `频道必须是 ${[...DYRS_CHANNELS, ...SITE_PRESETS.map((p) => p.key)].join('/')}`);
   }
-  const page = Math.max(0, Number(q(req, 'page')) || 0);
-  const u = new URL(`/${ch}.html`, 'https://placeholder.local');
-  for (const k of ['class', 'area', 'year', 'sort_field'] as const) {
-    const v = q(req, k);
-    if (v) u.searchParams.set(k, v);
-  }
-  if (page > 0) u.searchParams.set('page', String(page));
-  const path = `${u.pathname}${u.search}`;
+
+  // 预设入口是「精选首页」，不参与翻页（上游对带筛选的翻页会丢掉筛选）
+  const page = preset ? 0 : Math.max(0, Number(q(req, 'page')) || 0);
+  const ch = preset ? preset.ch : rawCh;
+  const presetParams = preset ? preset.params : {};
+
+  // 线路筛选值不合法就丢弃（当作没传），不透传上游
+  const rawLine = q(req, 'line')?.trim() ?? '';
+  const line = rawLine && isValidLineFilter(rawLine) ? rawLine : undefined;
+  if (rawLine && !line) return fail(res, 400, 'line 参数只允许中英文/数字/空格/点/横线，长度 1~32');
+
+  const rawExclude = q(req, 'exclude')?.trim() ?? '';
+  const exclude = rawExclude === 'his' || rawExclude === 'unlike' ? rawExclude : undefined;
+  if (rawExclude && !exclude) return fail(res, 400, 'exclude 只能是 his 或 unlike');
+
+  const path = buildSiteListPath({
+    ch,
+    page,
+    // 预设的固定筛选先铺底，用户显式传的同名参数可以覆盖它
+    class: q(req, 'class') ?? presetParams.class,
+    area: q(req, 'area') ?? presetParams.area,
+    year: q(req, 'year') ?? presetParams.year,
+    sortField: q(req, 'sort_field') ?? presetParams.sortField,
+    line: line ?? presetParams.line,
+    ban: q(req, 'ban') === 'true' || (presetParams.ban ?? false),
+    exclude: exclude ?? presetParams.exclude,
+  });
+
   try {
     const r = await fetchSitePage(path);
     if (r.status !== 200) return fail(res, r.status, upstreamMsg(r.status));
+    const cards = parseCards(r.html);
     res.json({
       ok: true,
-      channel: ch,
+      channel: rawCh,
+      preset: preset ? preset.key : null,
       page,
-      cards: parseCards(r.html),
+      cards,
       filters: parseFilters(r.html),
-      maxPage: parseMaxPage(r.html),
+      /**
+       * 预设入口一律不给分页。
+       *
+       * 实测：上游对「带 class/area 的筛选结果」并不会真的分页 —— 它返回的
+       * page 链接来自全库（纪录片显示 3868 页），真翻到第 2 页时筛选被丢掉，
+       * 结果又变回默认列表。与其给一个点了就「变味」的翻页条，不如只给精选首页。
+       */
+      maxPage: preset ? 0 : parseMaxPage(r.html),
+      // 空结果不是错误：预设频道（纪录片/蓝光）本身内容就少，前端给一句提示即可
+      empty: cards.length === 0,
     });
   } catch (e) {
     fail(res, 502, e instanceof Error ? e.message : '上游请求失败');
