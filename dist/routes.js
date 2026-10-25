@@ -15,6 +15,7 @@ import { ensureReaper, brokenEncoders, resetTranscode, startTranscode, transcode
 import { addLocalDir, findLocalDir, listLocalDirs, removeLocalDir } from './localdirs.js';
 import { CDN_BASE, DEFAULT_LINE, checkLine, fetchCdnPlaylist, fetchDirectPlaylist, fetchSegment, fetchSegmentUrl, fetchSuper, hoistPlayableVariants, listLines, looksLikePlaceholder, pickFastestLine, resolveMain, rewriteDyrsPlaylist, } from './dyrs.js';
 import { channelGroups, coversByIds, detailAny, detailByName, healthAll, listAny, mergedCategories, searchAll } from './sources/index.js';
+import { buildMacFacets, MAC_FACET_GROUPS } from './facets.js';
 import { bindRepo, checkUpdate, jobStatus, publicConfig, readConfig, readState, runUpdate, runtimeInfo, saveConfig, scheduleRestart, } from './updater.js';
 import { addFavorite, clearHistory, getHistory, isFavorite, listFavorites, listHistory, removeFavorite, saveHistory, } from './store.js';
 export const router = Router();
@@ -61,17 +62,39 @@ router.get('/search', async (req, res) => {
         fail(res, 502, e instanceof Error ? e.message : '搜索失败');
     }
 });
+/**
+ * 分类列表（主库）。
+ *
+ * 除分类（type_id）外，支持**服务端**地区 / 年份 / 语言筛选：
+ * 实测 macCMS 的 `ac=list` 认 `area` / `year` / `lang`，传了就是真过滤（含分页）。
+ * 取值先经 src/facets.ts 归一（`中国大陆` 必须写成 `大陆` 才生效）。
+ */
 router.get('/list', async (req, res) => {
     const typeId = q(req, 'type') || undefined;
     const sourceId = q(req, 'source') || undefined;
     const page = Math.max(1, Number(q(req, 'page')) || 1);
+    const applied = buildMacFacets({
+        area: q(req, 'area'),
+        year: q(req, 'year'),
+        lang: q(req, 'lang'),
+    });
     try {
-        const result = await listAny(typeId, page, sourceId);
-        res.json({ ok: true, ...result, typeMap: TYPE_MAP });
+        const result = await listAny(typeId, page, sourceId, applied);
+        res.json({ ok: true, ...result, applied, typeMap: TYPE_MAP });
     }
     catch (e) {
         fail(res, 502, e instanceof Error ? e.message : '获取列表失败');
     }
+});
+/**
+ * 主库可用的筛选维度（地区 / 年份 / 语言）。
+ *
+ * 词表在 `src/facets.ts` 里维护，前端直接按这个渲染，避免前后端各写一份。
+ * 注意：不同采集站支持程度不同（实测 hongniu 完全不认 area/year），
+ * 不支持的源会在 `/api/list` 里回 `facetsIgnored: true`，由前端提示。
+ */
+router.get('/facets', (_req, res) => {
+    res.json({ ok: true, groups: MAC_FACET_GROUPS });
 });
 /**
  * 分类清单。

@@ -188,9 +188,13 @@ export async function search(src, wd) {
  * 封面不在这一步取，交给 fetchCovers() 由前端渐进式补齐——
  * 因为补封面那一步实测会抖动（同一请求 4.2s ~ 8s+），
  * 阻塞在这里会让整页等十几秒。
+ *
+ * `facets` 是**服务端筛选**（不是前端过滤）：实测 macCMS 的 ac=list 认
+ * `area` / `year` / `lang` 三个参数，传了就是真过滤（含分页）。
+ * 取值必须先经 `src/facets.ts` 归一（`中国大陆` 要写成 `大陆` 才生效）。
  */
-export async function list(src, typeId, page) {
-    const url = buildUrl(src.base, { ac: 'list', t: typeId, pg: page });
+export async function list(src, typeId, page, facets) {
+    const url = buildUrl(src.base, { ac: 'list', t: typeId, pg: page, ...(facets ?? {}) });
     const data = await fetchJson(url, src.id);
     const items = Array.isArray(data.list)
         ? data.list.filter((v) => v && v.vod_name).map((v) => toItem(v, src))
@@ -202,6 +206,24 @@ export async function list(src, typeId, page) {
         total: Number(data.total ?? items.length) || items.length,
         source: src.id,
     };
+}
+/**
+ * 只取总数（不解析条目），给「一致性守卫」当基线用。
+ *
+ * 为什么需要它：实测上游会偶发**忽略筛选参数**、直接返回全量
+ * （`area=美国` 本该 1454，有一次返回了 4978）。判定依据就是
+ * 「带筛选的 total == 不带筛选的 total」，所以要能单独拿基线。
+ */
+export async function countTotal(src, typeId) {
+    try {
+        const url = buildUrl(src.base, { ac: 'list', t: typeId, pg: 1 });
+        const data = await fetchJson(url, src.id);
+        const n = Number(data.total);
+        return Number.isFinite(n) && n >= 0 ? n : null;
+    }
+    catch {
+        return null;
+    }
 }
 /**
  * 按 vod_id 批量取封面 / 年份 / 地区 / 状态。

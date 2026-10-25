@@ -1328,3 +1328,79 @@ button:focus-visible,
   .card, .lib-card, .lib-poster, .ep, .next-float { transition: none !important; }
   .card:hover, .lib-card:hover .lib-poster { transform: none; }
 }
+
+/* ---------------- 多维筛选（facet）：主库 index.html 与影视仓 dyrs.html 共用 ---------------- */
+/* .dw-* 是影视仓早期的类名，保留为别名，避免旧页面失样式 */
+.facet-box { margin-bottom: 10px; }
+.facet-row,
+.dw-filter {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.facet-row:last-child,
+.dw-filter:last-child { border-bottom: none; }
+.facet-label,
+.dw-filter-label {
+  color: var(--text-dim);
+  font-size: 13px;
+  min-width: 3rem;
+  padding: 4px 0;
+  flex-shrink: 0;
+}
+.facet-opt,
+.dw-filter a {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.facet-opt:hover,
+.dw-filter a:hover { background: var(--bg-3); color: var(--text); }
+.facet-opt.active,
+.dw-filter a.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* 预设频道（影视仓的纪录片/蓝光/美剧）：虚线描边，提示它不是上游的真实频道 */
+.lines button.preset {
+  border: 1px dashed var(--accent);
+  color: var(--accent);
+  background: transparent;
+}
+.lines button.preset:hover { background: var(--bg-3); }
+.lines button.preset.active { border-style: solid; background: var(--accent); color: #fff; }
+
+/* 已选条件下的 chips */
+.facet-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 4px 0 12px;
+}
+.facet-chips-label { color: var(--text-dim); font-size: 13px; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12px;
+  text-decoration: none;
+}
+.chip b { color: var(--text-dim); font-weight: 400; }
+.chip:hover { border-color: var(--accent); }
+.chip-clear { color: var(--accent); border-color: var(--accent); background: transparent; }
+
+@media (max-width: 640px) {
+  .facet-row, .dw-filter { gap: 6px; }
+  .facet-opt, .dw-filter a { padding: 3px 8px; font-size: 12px; }
+}

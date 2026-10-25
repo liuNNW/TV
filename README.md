@@ -113,6 +113,7 @@ npm run dev        # tsx watch 热重载
 | 搜索 | 按片名搜，可搜演员，多源同时搜并合并结果 |
 | **影视仓** | 顶栏独立入口（`dyrs.html`），接的是 dyrs.me 那套站点的片源：首页热播 + 分类筛选 + 分页 + 搜索。频道条有 **8 个入口**：5 个上游真实频道（电影/电视剧/综艺/动漫/短剧）+ 3 个**预设筛选**（纪录片 / 蓝光 / 美剧，界面用虚线描边区分）。筛选支持分类·地区·年份·排序·线路(蓝光)·文艺片。详情页列出**全部线路**（按「上游直接给真实 m3u8」优先排序）与选集，点播复用老播放页（`play.html?source=dyrs`）。**老界面与 macCMS 播放链路完全不受影响** |
 | **多镜像线路池** | 影视仓背后是 34 条同库镜像。不做「单点线路」，而是候选池最多试 3 条、失败自动换、成功的提到池首，缓存按路径而不是完整地址（换镜像仍命中） |
+| **多维筛选** | 两个入口都能按 **分类 × 地区 × 年份**（主库还有**语言**）组合筛选，同轴单选、点已选值取消、已选条件以 chips 展示、可一键清除、跨分页与刷新保留、URL 可分享。影视仓的值来自上游页面实时解析（每频道词表不同，电影 25 分类/短剧 26 分类），主库的值来自 `src/facets.ts` 词表 —— 走 macCMS 的**服务端** `area`/`year`/`lang` 过滤（实测 `area=美国` 能把 4978 部收窄到 1454 部，分页也稳） |
 | 自绘播放器 | 优酷/腾讯风格控制栏：缓冲进度条+时间气泡+拖拽圆点、快退/快进 10 秒、倍速、音量、画中画、全屏、自动隐藏、双击全屏 |
 | 广告剔除 | 服务端清洗 m3u8（异域名/编号断接/广告特征），播放器内提示「已自动跳过 N 个广告片段」。**只在服务端链路（`/api/hls`、`/api/proxy`）生效**；客户端直连 CDN 时请求不经过服务器，不含广告过滤。重建列表时保留上游的 `TARGETDURATION` / `MEDIA-SEQUENCE` 等全局标签 |
 | 频道分层 | 电影 / 电视剧 / 综艺 / 动漫 / 体育 / 解说，不把全部分类平铺 |
@@ -229,7 +230,8 @@ export const CHANNEL_OVERRIDES: Record<string, ChannelName> = {
 | GET | `/api/search?wd=` | 搜索（多源合并） |
 | GET | `/api/channels?force=1` | **按频道分组的分类**（首页用这个） |
 | GET | `/api/categories?force=1` | 扁平分类清单 |
-| GET | `/api/list?type=&source=&page=` | 分类分页列表（**不含封面**，快） |
+| GET | `/api/list?type=&source=&page=&area=&year=&lang=` | 分类分页列表（**不含封面**，快）。`area`/`year`/`lang` 是**服务端筛选**；取值先归一（`中国大陆`→`大陆`）。返回 `applied`（生效的筛选）与 `facetsIgnored`（该源不支持此筛选） |
+| GET | `/api/facets` | 主库可用的筛选词表（地区 20 / 年份 37 / 语言 6），前端直接渲染 |
 | GET | `/api/covers?ids=1,2,3&source=` | **批量取封面/年份**（渐进式补图） |
 | GET | `/api/detail?id=&source=&name=` | 详情 + 线路 + 选集 |
 | GET | `/api/detail-by-name?name=&source=&year=` | 按片名跨源找同一部片 |
@@ -323,7 +325,7 @@ export const CHANNEL_OVERRIDES: Record<string, ChannelName> = {
 
 ```bash
 npm run typecheck                      # 类型检查
-npm test                               # 单元测试（178 个 / 12 文件）
+npm test                               # 单元测试（194 个 / 13 文件）
 node scripts/acceptance.mjs            # 端到端验收（22 项）
 node scripts/source-probe.mjs --maccms <采集接口>   # 片源探测（加源前先跑这个）
 node scripts/source-probe.mjs --wzzycc <模板站地址>  # 影视仓镜像探测
@@ -344,6 +346,7 @@ movie-player/
 │   ├── config.ts              # 片源配置 + 频道规则 + 各类阈值（加源改这里）
 │   ├── cache.ts               # LRU + TTL 缓存
 │   ├── channels.ts            # 分类 → 频道归属（纯函数，有单测）
+│   ├── facets.ts              # 多维筛选词表（地区/年份/语言）+ 归一（纯函数，有单测）
 │   ├── parser.ts              # macCMS 字段解析（纯函数，有单测）
 │   ├── proxy.ts               # 媒体/图片代理 + SSRF 防护
 │   ├── store.ts               # 收藏/历史（JSON 原子写）
@@ -365,7 +368,7 @@ movie-player/
 │   ├── local.html             # 本地媒体（飞牛影视风格海报墙 + 播放）
 │   ├── local-ui.css           # 本地媒体的深色主题
 │   ├── favorites.html  history.html
-│   ├── app.js  player.js  player-ui.js  covers.js  style.css
+│   ├── app.js  player.js  player-ui.js  covers.js  facets.js  style.css
 │   └── vendor/hls.min.js      # 本地引入，不依赖外部 CDN
 ├── scripts/                   # 验收 / 探测脚本（source-probe.mjs 用于加源前的健康探测）
 ├── test/                      # 单元测试

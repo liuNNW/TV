@@ -143,25 +143,36 @@ export async function searchAll(wd: string): Promise<{ items: Item[]; okSources:
  * 列表：默认用第一个可用的源（列表类请求没必要合并多源，会重复且慢）。
  * 指定 source 时只用那个源，因为分类 id 各源不通用。
  *
- * 结果按「源:分类:页码」缓存 30 分钟。
+ * 结果按「源:分类:页码:筛选」缓存 30 分钟。
  * 取封面要走两步上游请求，剧集分类第二步实测 4 秒，不缓存翻页会很难受。
+ * 缓存键必须带上筛选维度，否则「筛过的列表」会串到「没筛的请求」上。
  */
 export async function listAny(
   typeId: string | undefined,
   page: number,
   sourceId?: string,
-): Promise<ListResult> {
+  facets?: Record<string, string>,
+): Promise<ListResult & { facetsIgnored?: boolean }> {
   const preferred = findSource(sourceId);
   // 明确指定源时即使它被熔断也照试（用户是点着这个源来的，别替他决定）
   const order = preferred ? [preferred] : activeSources();
 
-  const cacheKey = `${sourceId ?? 'auto'}:${typeId ?? 'all'}:${page}`;
+  const applied = facets ?? {};
+  const appliedKeys = Object.keys(applied).filter((k) => applied[k]);
+  const facetKey = appliedKeys.length
+    ? appliedKeys
+        .sort()
+        .map((k) => `${k}=${applied[k]}`)
+        .join('&')
+    : '-';
+
+  const cacheKey = `${sourceId ?? 'auto'}:${typeId ?? 'all'}:${page}:${facetKey}`;
 
   return cached(listCache, cacheKey, async () => {
     let lastErr: unknown;
     for (const src of order) {
       try {
-        const r = await maccms.list(src, typeId, page);
+        const r = await listOnce(src, typeId, page, applied, appliedKeys.length > 0);
         noteOk(src.id);
         return r;
       } catch (e) {
@@ -171,6 +182,55 @@ export async function listAny(
     }
     throw lastErr instanceof Error ? lastErr : new Error('所有片源均不可用');
   });
+}
+
+/**
+ * 带筛选时多一层「一致性守卫」。
+ *
+ * 实测上游会偶发忽略筛选参数、直接返回全量（`area=美国` 本该 1454，
+ * 有一次返回了 4978）。判据：带筛选的 total == 不带筛选的基线 total。
+ * 命中就重试一次；仍相同则标记 facetsIgnored，让前端提示「该源不支持此筛选」，
+ * 而不是把全量结果伪装成筛选结果。
+ */
+async function listOnce(
+  src: SourceConfig,
+  typeId: string | undefined,
+  page: number,
+  applied: Record<string, string>,
+  guarded: boolean,
+): Promise<ListResult & { facetsIgnored?: boolean }> {
+  const first = await maccms.list(src, typeId, page, applied);
+  if (!guarded) return first;
+
+  const baseline = await baselineTotal(src, typeId);
+  // 基线拿不到、或是 0，就没法判定，直接认账（宁可少一层保护也别阻塞列表）
+  if (baseline === null || baseline <= 0) return first;
+  if (first.total !== baseline) return first;
+
+  // 疑似上游把筛选丢了：重试一次
+  const second = await maccms.list(src, typeId, page, applied);
+  if (second.total !== baseline) return second;
+  return { ...second, facetsIgnored: true };
+}
+
+/** 无筛选时的总数基线：按 (源, 分类) 缓存 30 分钟 */
+const baselineCache = new Map<string, { at: number; total: number | null }>();
+const BASELINE_TTL_MS = 30 * 60_000;
+
+async function baselineTotal(src: SourceConfig, typeId: string | undefined): Promise<number | null> {
+  const key = `${src.id}:${typeId ?? 'all'}`;
+  const hit = baselineCache.get(key);
+  if (hit && Date.now() - hit.at < BASELINE_TTL_MS) return hit.total;
+
+  const total = await maccms.countTotal(src, typeId);
+  if (baselineCache.size > 500) baselineCache.clear();
+  baselineCache.set(key, { at: Date.now(), total });
+  return total;
+}
+
+/** 清空基线缓存（测试用） */
+export function resetBaselineCache(): void {
+  baselineCache.clear();
 }
 
 /**

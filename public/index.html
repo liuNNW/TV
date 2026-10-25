@@ -16,6 +16,8 @@
 
   <!-- 只显示「当前频道」下的分类，不再把全部分类平铺 -->
   <div class="lines" id="catBox" aria-label="影片分类"></div>
+  <div id="facetBox" class="facet-box" aria-label="筛选条件"></div>
+  <div id="facetChips" class="facet-chips"></div>
 
   <div id="content">
     <div class="state"><span class="spinner"></span> 加载中…</div>
@@ -24,6 +26,7 @@
 </main>
 
 <script src="app.js"></script>
+<script src="facets.js"></script>
 <script>
 const params = new URLSearchParams(location.search);
 const wd = params.get('wd') || '';
@@ -33,11 +36,19 @@ let sourceId = params.get('source') || '';      // 具体用哪个源
 let typeId = params.get('type') || '';          // 该源下的分类 id
 let page = Math.max(1, Number(params.get('page')) || 1);
 
+/* 已选的多维筛选：地区 / 年份 / 语言（服务端过滤，见 /api/list） */
+let facets = DSHFacets.readFacets(params, DSHFacets.MAC_KEYS);
+
+/* 筛选词表（后端 /api/facets 给，前后端同一份） */
+let facetGroups = null;
+
 mountTopbar(channelName ? `index.html?ch=${encodeURIComponent(channelName)}` : 'index.html');
 
 const content = document.getElementById('content');
 const pager = document.getElementById('pager');
 const catBox = document.getElementById('catBox');
+const facetBox = document.getElementById('facetBox');
+const facetChips = document.getElementById('facetChips');
 
 let channelsCache = null;
 
@@ -98,7 +109,95 @@ function pickCat(name) {
   const q = new URLSearchParams();
   q.set('ch', channelName);
   q.set('cat', name);
+  // 切分类保留已选筛选（否则用户点一下分类，地区/年份就白选了）
+  for (const [k, v] of Object.entries(facets)) if (v) q.set(k, v);
   location.href = `index.html?${q}`;
+}
+
+/* ---------------- 多维筛选（地区 / 年份 / 语言） ---------------- */
+
+/** 拼站内地址：频道 + 分类 + 筛选 + 页码 */
+function buildUrl(nextFacets, nextPage) {
+  const q = new URLSearchParams();
+  if (channelName) q.set('ch', channelName);
+  if (catName) q.set('cat', catName);
+  for (const [k, v] of Object.entries(nextFacets || {})) if (v) q.set(k, v);
+  const p = nextPage === undefined ? page : nextPage;
+  if (p && p > 1) q.set('page', String(p));
+  return `index.html?${q}`;
+}
+
+/** 点一个筛选值：同轴替换、点已选值取消、其它轴保留 */
+function pickFacet(key, value) {
+  const next = DSHFacets.toggleFacet(facets, key, value);
+  location.href = buildUrl(next, 1);
+}
+
+/** 清除全部筛选 */
+function clearFacets() {
+  location.href = buildUrl(DSHFacets.clearAll(), 1);
+}
+
+/** 拉词表（只成功一次就缓存） */
+async function loadFacetGroups() {
+  if (facetGroups) return facetGroups;
+  try {
+    const r = await api('/facets');
+    facetGroups = r.groups || [];
+  } catch {
+    facetGroups = [];
+  }
+  return facetGroups;
+}
+
+/**
+ * 渲染筛选行。
+ *
+ * 值来自后端 `/api/facets`（`src/facets.ts` 里的词表），不是前端硬编码，
+ * 所以加一个地区只需要改后端一处。
+ * 用 <a href> 而不是 onclick：可以中键新窗口打开、也能被复制分享。
+ */
+async function renderFacets() {
+  if (wd) { facetBox.innerHTML = ''; facetChips.innerHTML = ''; return; }
+
+  const groups = await loadFacetGroups();
+  if (!groups.length) { facetBox.innerHTML = ''; return; }
+
+  facetBox.innerHTML = groups
+    .map((g) => {
+      const opts = g.values
+        .map((v) => {
+          const active = DSHFacets.isActive(facets, g.key, v.value) ? ' active' : '';
+          const next = DSHFacets.toggleFacet(facets, g.key, v.value);
+          return `<a class="facet-opt${active}" href="${esc(buildUrl(next, 1))}">${esc(v.label)}</a>`;
+        })
+        .join('');
+      return `<div class="facet-row"><span class="facet-label">${esc(g.label)}</span>${opts}</div>`;
+    })
+    .join('');
+
+  renderChips(groups);
+}
+
+function renderChips(groups) {
+  const picked = [];
+  for (const g of groups || []) {
+    const v = facets[g.key];
+    if (!v) continue;
+    const hit = g.values.find((x) => x.value === v);
+    picked.push({ key: g.key, label: g.label, value: v, text: hit ? hit.label : v });
+  }
+  if (!picked.length) { facetChips.innerHTML = ''; return; }
+
+  const chips = picked
+    .map((c) => {
+      const next = DSHFacets.toggleFacet(facets, c.key, c.value);
+      return `<a class="chip" href="${esc(buildUrl(next, 1))}" title="点此取消">${esc(c.label)}：${esc(c.text)} <b>×</b></a>`;
+    })
+    .join('');
+
+  facetChips.innerHTML = `<span class="facet-chips-label">已选</span>${chips}`
+    + `<a class="chip chip-clear" href="${esc(buildUrl(DSHFacets.clearAll(), 1))}">清除筛选</a>`;
 }
 
 /**
@@ -171,17 +270,27 @@ async function load() {
 
     const url = `/list?page=${page}`
       + (typeId ? `&type=${encodeURIComponent(typeId)}` : '')
-      + (sourceId ? `&source=${encodeURIComponent(sourceId)}` : '');
+      + (sourceId ? `&source=${encodeURIComponent(sourceId)}` : '')
+      + Object.entries(facets)
+          .filter(([, v]) => v)
+          .map(([k, v]) => `&${k}=${encodeURIComponent(v)}`)
+          .join('');
 
     const r = await api(url);
-    document.getElementById('srcHint').textContent = `片源: ${r.source}`;
+    document.getElementById('srcHint').textContent = r.facetsIgnored
+      ? `片源: ${r.source} · 该源不支持此筛选`
+      : `片源: ${r.source}`;
 
     // 列表做了故障转移，实际用的源可能不是我们请求的那个。
     // 补封面必须用「实际返回的源」，否则拿 A 站的 id 去 B 站查，一条都匹配不上。
     sourceId = r.source;
 
     if (!r.items.length) {
-      content.innerHTML = '<div class="state">这一页没有内容</div>';
+      const hasFacet = Object.values(facets).some((v) => v);
+      content.innerHTML = hasFacet
+        ? `<div class="state">当前筛选下没有内容
+            <div style="margin-top:12px"><button class="primary" onclick="clearFacets()">清除筛选</button></div></div>`
+        : '<div class="state">这一页没有内容</div>';
       return;
     }
 
@@ -214,6 +323,7 @@ function go(n) {
   const q = new URLSearchParams();
   if (channelName) q.set('ch', channelName);
   if (catName) q.set('cat', catName);
+  for (const [k, v] of Object.entries(facets)) if (v) q.set(k, v);
   q.set('page', String(n));
   history.pushState(null, '', `index.html?${q}`);
   load();
@@ -233,6 +343,9 @@ function go(n) {
  * 分类行本身依旧异步渲染，不阻塞。
  */
 const hasCatParam = !!params.get('cat');
+
+// 筛选行不阻塞首屏：词表是静态的，回来就渲染
+renderFacets();
 
 if (hasCatParam) {
   load();

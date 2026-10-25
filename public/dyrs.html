@@ -6,48 +6,6 @@
 <title>影视仓 - 影视播放站</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
-<style>
-/* 影视仓专用样式，统一 dw- 前缀，不动 style.css 里的既有类 */
-.dw-filter {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding: 6px 0;
-  border-bottom: 1px dashed var(--border);
-}
-.dw-filter:last-child { border-bottom: none; margin-bottom: 12px; }
-.dw-filter-label {
-  color: var(--text-dim);
-  font-size: 13px;
-  min-width: 3rem;
-  padding: 4px 0;
-  flex-shrink: 0;
-}
-.dw-filter a {
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  color: var(--text-dim);
-  text-decoration: none;
-  font-size: 13px;
-}
-.dw-filter a:hover { background: var(--bg-3); color: var(--text); }
-.dw-filter a.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-
-/* 预设频道（纪录片 / 蓝光 / 美剧）不是上游的独立频道，用虚线描边区分，避免误导 */
-.lines button.preset {
-  border: 1px dashed var(--accent);
-  color: var(--accent);
-  background: transparent;
-}
-.lines button.preset:hover { background: var(--bg-3); }
-.lines button.preset.active {
-  border-style: solid;
-  background: var(--accent);
-  color: #fff;
-}
-</style>
 </head>
 <body>
 <main class="wrap">
@@ -57,6 +15,7 @@
   </div>
 
   <div class="lines" id="catBox" style="margin-bottom:12px"></div>
+  <div id="chipsBox" class="facet-chips"></div>
   <div id="filterBox"></div>
 
   <div id="content">
@@ -66,6 +25,7 @@
 </main>
 
 <script src="app.js"></script>
+<script src="facets.js"></script>
 <script>
 /* 影视仓（dyrs）浏览页：首页推荐 / 分类列表 / 搜索。
  * 点卡片进 dyrs-detail.html，点选集才跳老播放页 play.html（复用同一套播放器）。 */
@@ -76,6 +36,9 @@ const params = new URLSearchParams(location.search);
 const wd = params.get('wd') || '';
 let channel = params.get('ch') || '';
 let page = Math.max(0, Number(params.get('page')) || 0);
+
+/** 已选的筛选（上游那 7 行筛选，现在可以多轴组合） */
+let facets = DSHFacets.readFacets(params, DSHFacets.SITE_KEYS);
 
 mountTopbar('dyrs.html');
 
@@ -97,8 +60,14 @@ const CHANNELS = [
   ['us', '美剧', true],
 ];
 
-/** 会被透传给上游列表接口的筛选参数（与后端 buildSiteListPath 对齐） */
-const FILTER_KEYS = ['class', 'area', 'year', 'sort_field', 'line', 'ban', 'exclude'];
+/** 上游筛选行的 label → 我们这一行管哪些参数（「全部」按钮要清的就是这些） */
+const ROW_KEYS = {
+  分类: ['class'],
+  地区: ['area'],
+  年份: ['year'],
+  排序: ['sort_field'],
+  高级: ['line', 'ban'],   // 超清1080p=origin / 文艺片=ban
+};
 
 function channelName(key) {
   const hit = CHANNELS.find((c) => c[0] === key);
@@ -109,6 +78,7 @@ const content = document.getElementById('content');
 const pager = document.getElementById('pager');
 const catBox = document.getElementById('catBox');
 const filterBox = document.getElementById('filterBox');
+const chipsBox = document.getElementById('chipsBox');
 const headTitle = document.getElementById('headTitle');
 const hint = document.getElementById('hint');
 
@@ -164,68 +134,35 @@ function renderCatRow() {
   }).join('');
 }
 
-/** 上游筛选行的 href（/dianying.html?class=..）→ 本站影视仓地址 */
-function filterHref(href) {
-  try {
-    const u = new URL(href, location.origin);
-    const ch = (u.pathname.match(/^\/([a-z]+)\.html$/) || [])[1] || channel;
-    const q = new URLSearchParams(u.search);
-    q.delete('page');
-    // 上游的 `origin`（线路筛选）换成我们的 `line`：我们 API 里 origin 已经是「线路」的语义
-    const line = q.get('origin');
-    if (line) {
-      q.delete('origin');
-      q.set('line', line);
-    }
-    // 上游两条排除参数合并成我们的 exclude=his|unlike
-    if (q.get('exclude_his')) {
-      q.delete('exclude_his');
-      q.set('exclude', 'his');
-    }
-    if (q.get('exclude_unlike')) {
-      q.delete('exclude_unlike');
-      q.set('exclude', 'unlike');
-    }
-    q.set('ch', ch);
-    return `dyrs.html?${q.toString()}`;
-  } catch {
-    return `dyrs.html?ch=${encodeURIComponent(channel)}`;
-  }
-}
+/**
+ * 上游某个筛选项 → 本站地址 + 是否选中。
+ *
+ * 关键区别（这是本次修的真 bug）：
+ *   上游给的链接只带**一个**参数（`?area=美国`），以前直接照抄 → 点地区就把
+ *   已选的分类清掉了，永远只能单维筛选。现在改成：
+ *     有参数 → **只换这一轴**，其它轴从当前 URL 继承（`toggleFacet`）
+ *     无参数（「全部」）→ 只清这一行管的轴
+ *     频道行 → 换频道时清空全部筛选（分类词表按频道完全不同，带着只会得到空结果）
+ */
+function facetLink(href, rowLabel) {
+  const opt = DSHFacets.upstreamOption(href, location.origin);
+  const ch = DSHFacets.channelFromHref(href, location.origin) || channel;
 
-/** 上游筛选参数 → 我们的参数名（`origin` 是上游的叫法，`line` 是我们的） */
-const FILTER_MAP = [
-  ['class', 'class'],
-  ['area', 'area'],
-  ['year', 'year'],
-  ['sort_field', 'sort_field'],
-  ['origin', 'line'],
-  ['ban', 'ban'],
-];
-
-/** 当前选中的筛选项（只对「带参数」的选项高亮，避免整行都亮） */
-function isActiveFilter(href) {
-  try {
-    const u = new URL(href, location.origin);
-    let any = false;
-    for (const [upKey, ourKey] of FILTER_MAP) {
-      const want = u.searchParams.get(upKey) || '';
-      const have = params.get(ourKey) || '';
-      if (want !== have) return false;
-      if (want) any = true;
-    }
-    // 排除类：上游是两条参数，我们统一成一个 exclude
-    const exUp = u.searchParams.get('exclude_his')
-      ? 'his'
-      : u.searchParams.get('exclude_unlike')
-        ? 'unlike'
-        : '';
-    if (exUp !== (params.get('exclude') || '')) return false;
-    if (exUp) any = true;
-    return any;
-  } catch {
-    return false;
+  let next;
+  let active;
+  if (rowLabel === '频道') {
+    next = DSHFacets.clearAll();
+    active = !!ch && ch === channel;
+  } else if (opt.key) {
+    next = DSHFacets.toggleFacet(facets, opt.key, opt.value);
+    active = DSHFacets.isActive(facets, opt.key, opt.value);
+  } else {
+    next = { ...facets };
+    for (const k of ROW_KEYS[rowLabel] || []) delete next[k];
+    active = !(ROW_KEYS[rowLabel] || []).some((k) => facets[k]);
   }
+
+  return { href: DSHFacets.composeHref('dyrs.html', next, { ch }), active };
 }
 
 function renderFilters(filters) {
@@ -238,12 +175,36 @@ function renderFilters(filters) {
   const rows = filters.filter((row) => row.label !== '排除');
   filterBox.innerHTML = rows.map((row) => {
     const opts = (row.options || []).map((o) => {
-      const href = filterHref(o.href);
-      const active = isActiveFilter(o.href) ? ' class="active"' : '';
-      return `<a href="${esc(href)}"${active}>${esc(o.text)}</a>`;
+      const { href, active } = facetLink(o.href, row.label);
+      return `<a class="facet-opt${active ? ' active' : ''}" href="${esc(href)}">${esc(o.text)}</a>`;
     }).join('');
-    return `<div class="dw-filter"><span class="dw-filter-label">${esc(row.label)}</span>${opts}</div>`;
+    return `<div class="facet-row"><span class="facet-label">${esc(row.label)}</span>${opts}</div>`;
   }).join('');
+}
+
+/** 已选条件 chips：显示当前生效的筛选，点 × 取消，右侧一键清除 */
+function renderChips() {
+  const picked = DSHFacets.chips(facets);
+  if (!picked.length) { chipsBox.innerHTML = ''; return; }
+
+  const LABEL = {
+    class: '分类',
+    area: '地区',
+    year: '年份',
+    sort_field: '排序',
+    line: '线路',
+    ban: '高级',
+  };
+
+  chipsBox.innerHTML = '<span class="facet-chips-label">已选</span>'
+    + picked
+      .map((c) => {
+        const next = DSHFacets.toggleFacet(facets, c.key, c.value);
+        const href = DSHFacets.composeHref('dyrs.html', next, { ch: channel });
+        return `<a class="chip" href="${esc(href)}" title="点此取消">${esc(LABEL[c.key] || c.key)}：${esc(c.value)} <b>×</b></a>`;
+      })
+      .join('')
+    + `<a class="chip chip-clear" href="${esc(DSHFacets.composeHref('dyrs.html', DSHFacets.clearAll(), { ch: channel }))}">清除筛选</a>`;
 }
 
 function renderPager(p, mx) {
@@ -260,6 +221,7 @@ function renderPager(p, mx) {
 async function load() {
   filterBox.innerHTML = '';
   pager.innerHTML = '';
+  chipsBox.innerHTML = '';
   renderCatRow();
   const token = ++renderToken;
   content.innerHTML = '<div class="state"><span class="spinner"></span> 加载中…</div>';
@@ -283,11 +245,10 @@ async function load() {
     if (channel) {
       const name = channelName(channel);
       headTitle.textContent = `影视仓 · ${name}`;
+      renderChips();
+
       const q = new URLSearchParams();
-      for (const k of FILTER_KEYS) {
-        const v = params.get(k);
-        if (v) q.set(k, v);
-      }
+      for (const [k, v] of Object.entries(facets)) if (v) q.set(k, v);
       q.set('ch', channel);
       q.set('page', String(page));
 
@@ -300,9 +261,13 @@ async function load() {
       if (cards.length) {
         content.innerHTML = `<div class="grid">${cards.map(renderCard).join('')}</div>`;
       } else if (r.empty) {
-        // 预设频道（纪录片/蓝光）内容本来就少，空结果不是错误
-        content.innerHTML = `<div class="state"><div class="big">🗂</div>「${esc(name)}」这个筛选下暂时没有内容
-          <div style="margin-top:12px"><button onclick="goChannel('dianying')">回电影频道</button></div></div>`;
+        // 预设频道（纪录片/蓝光）或组合筛选下内容本来就少，空结果不是错误
+        const hasFacet = Object.values(facets).some((v) => v);
+        content.innerHTML = hasFacet
+          ? `<div class="state"><div class="big">🗂</div>当前筛选下没有内容
+              <div style="margin-top:12px"><button class="primary" onclick="clearFacets()">清除筛选</button></div></div>`
+          : `<div class="state"><div class="big">🗂</div>「${esc(name)}」暂时没有内容
+              <div style="margin-top:12px"><button onclick="goChannel('dianying')">回电影频道</button></div></div>`;
       } else {
         content.innerHTML = '<div class="state">这一页没有内容</div>';
       }
@@ -347,19 +312,20 @@ async function load() {
 }
 
 function goChannel(c) {
+  // 切频道清空筛选：分类/地区词表按频道完全不同，带着只会得到空结果
   location.href = `dyrs.html?ch=${encodeURIComponent(c)}`;
+}
+
+/** 清除全部筛选（保留频道） */
+function clearFacets() {
+  location.href = DSHFacets.composeHref('dyrs.html', DSHFacets.clearAll(), { ch: channel });
 }
 
 function goPage(n) {
   if (n < 0) return;
-  const q = new URLSearchParams();
-  for (const k of FILTER_KEYS) {
-    const v = params.get(k);
-    if (v) q.set(k, v);
-  }
-  q.set('ch', channel);
-  q.set('page', String(n));
-  location.href = `dyrs.html?${q.toString()}`;
+  const extra = { ch: channel };
+  if (n > 0) extra.page = n;
+  location.href = DSHFacets.composeHref('dyrs.html', facets, extra);
 }
 
 load();
