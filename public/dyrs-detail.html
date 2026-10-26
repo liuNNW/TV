@@ -83,7 +83,7 @@ function render() {
 
   box.innerHTML = `
     <div class="detail-head">
-      <div class="poster-lg"><img src="${esc(posterSrc())}" alt="" onerror="this.style.display='none'"></div>
+      <div class="poster-lg">${posterHTML(posterSrc(), detail.name)}</div>
       <div class="detail-info">
         <h1>${esc(detail.name)}</h1>
         ${detail.alias ? `<div class="row">别名：${esc(detail.alias)}</div>` : ''}
@@ -92,7 +92,7 @@ function render() {
         ${detail.actors && detail.actors.length ? `<div class="row"><b>主演</b> ${esc(detail.actors.slice(0, 8).join(' / '))}</div>` : ''}
         <div class="row"><b>片源</b> 影视仓 · ${esc(o.origin)}（共 ${o.episodes.length} 集）</div>
         ${detail.description ? `<div class="plot" id="plot">${esc(detail.description)}</div>
-          <div style="margin-top:6px"><button onclick="document.getElementById('plot').classList.toggle('expanded')">展开/收起简介</button></div>` : ''}
+          <button class="link-btn" onclick="toggleClamp('plot', this, '展开简介', '收起简介')">展开简介</button>` : ''}
         <div class="actions">
           <button class="primary" onclick="play(0)">▶ 播放第一集</button>
           <button onclick="location.href='dyrs.html'">‹ 回影视仓</button>
@@ -101,7 +101,7 @@ function render() {
     </div>
 
     <div class="section-title"><h2>选线路 / 选集</h2></div>
-    <div class="lines" id="lineBox"></div>
+    <div class="lines line-chips" id="lineBox"></div>
     <div class="episodes" id="epBox"></div>
 
     <div class="section-title" id="driveTitle" hidden><h2>云盘下载</h2></div>
@@ -159,7 +159,11 @@ function renderLines() {
     // 偶尔会误报，不该直接把人挡在外面。
     const dead = o.alive === false ? ' dead' : '';
     const tag = o.alive === false ? ' · 暂不可用' : '';
-    return `<button class="${active}${dead}" onclick="pickLine(${i})" title="${esc(o.origin)}${tag}">线路 ${i + 1} · ${esc(o.origin)} (${o.episodes.length})${tag}</button>`;
+    const kindText = o.kind === 'direct' ? '直链' : '影视仓 CDN';
+    return `<button class="${active}${dead}" onclick="pickLine(${i})" title="线路 ${i + 1} · ${esc(o.origin)}${tag}">
+      <span class="ln-name">线路 ${i + 1} · ${esc(o.origin)}${o.alive === false ? ' ⚠' : ''}</span>
+      <span class="ln-sub">${kindText} · ${o.episodes.length} 集${tag}</span>
+    </button>`;
   }).join('');
 }
 

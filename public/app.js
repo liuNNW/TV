@@ -103,6 +103,35 @@ function imgSrc(url) {
   return `${API}/proxy?url=${encodeURIComponent(url)}`;
 }
 
+/**
+ * 详情页封面：占位底 + 图片。
+ *
+ * 占位块（片名首字）垫在图片下面：没有封面、或者图 404 被 onerror 移除之后，
+ * 露出的是占位而不是一块空灰 —— 原来 `onerror` 直接 `display:none`，留下 200×300 的空白。
+ * 外层 `.poster-lg` 已固定 2:3 比例，所以这里不需要再管尺寸。
+ */
+function posterHTML(pic, name) {
+  const ini = esc((name || '?').trim().slice(0, 1) || '?');
+  if (!pic) return `<div class="poster-ph">${ini}</div>`;
+  // 影视仓那边给的是本站地址（/api/dyrs/site/img?id=…），别再包一层代理
+  const src = pic.startsWith('/') ? pic : imgSrc(pic);
+  return `<div class="poster-ph">${ini}</div><img src="${esc(src)}" alt="" loading="lazy" onerror="this.remove()">`;
+}
+
+/**
+ * 展开 / 收起一段被 clamp 的文本（主演、简介共用）。
+ *
+ * 依赖 CSS：`.clamp-2`（主演 2 行）与 `.plot`（简介 3 行）默认折叠，
+ * 加上 `.expanded` 就展开。两个详情页共用这个函数，所以放在 app.js。
+ */
+function toggleClamp(id, btn, moreText, lessText) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const open = !el.classList.contains('expanded');
+  el.classList.toggle('expanded', open);
+  if (btn) btn.textContent = open ? lessText : moreText;
+}
+
 /** 详情页地址 */
 function detailHref(item) {
   return `detail.html?id=${encodeURIComponent(item.id)}&source=${encodeURIComponent(item.source)}&name=${encodeURIComponent(item.name)}`;

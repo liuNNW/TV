@@ -63,17 +63,17 @@ function render() {
     return;
   }
 
-  const poster = detail.pic
-    ? `<img src="${esc(imgSrc(detail.pic))}" alt="" onerror="this.style.display='none'">`
-    : '';
+  const poster = posterHTML(detail.pic, detail.name);
 
-  const infoRows = [];
-  if (detail.year) infoRows.push(`<b>年份</b> ${esc(detail.year)}`);
-  if (detail.area) infoRows.push(`<b>地区</b> ${esc(detail.area)}`);
-  if (detail.lang) infoRows.push(`<b>语言</b> ${esc(detail.lang)}`);
-  if (detail.typeName) infoRows.push(`<b>类型</b> ${esc(detail.typeName)}`);
-  if (detail.remarks) infoRows.push(`<b>状态</b> ${esc(detail.remarks)}`);
-  if (detail.score && Number(detail.score) > 0) infoRows.push(`<b>评分</b> ${esc(detail.score)}`);
+  // 年份/地区/语言/类型/状态 收成一行 chips —— 原来各占一行，白白吃掉 130px 高度
+  const chips = [detail.year, detail.area, detail.lang, detail.typeName, detail.remarks]
+    .filter(Boolean)
+    .map((t) => `<span class="chip">${esc(t)}</span>`)
+    .join('');
+  const scoreChip =
+    detail.score && Number(detail.score) > 0
+      ? `<span class="chip score">★ ${esc(detail.score)}</span>`
+      : '';
 
   box.innerHTML = `
     <div class="detail-head">
@@ -81,28 +81,73 @@ function render() {
       <div class="detail-info">
         <h1>${esc(detail.name)}</h1>
         ${detail.sub ? `<div class="row">别名：${esc(detail.sub)}</div>` : ''}
-        ${infoRows.map((r) => `<div class="row">${r}</div>`).join('')}
+        ${chips || scoreChip ? `<div class="meta-chips">${chips}${scoreChip}</div>` : ''}
         ${detail.director ? `<div class="row"><b>导演</b> ${esc(detail.director)}</div>` : ''}
-        ${detail.actor ? `<div class="row"><b>主演</b> ${esc(detail.actor.slice(0, 120))}</div>` : ''}
+        ${
+          detail.actor
+            ? `<div class="row"><b>主演</b> <span class="clamp-2" id="actorText">${esc(detail.actor)}</span></div>
+               <button class="link-btn" onclick="toggleClamp('actorText', this, '展开主演', '收起主演')">展开主演</button>`
+            : ''
+        }
         <div class="row"><b>片源</b> ${esc(detail.sourceName)}</div>
-        ${detail.content ? `<div class="plot" id="plot">${esc(detail.content)}</div>
-          <div style="margin-top:6px"><button onclick="document.getElementById('plot').classList.toggle('expanded')">展开/收起简介</button></div>` : ''}
+        ${
+          detail.content
+            ? `<div class="plot" id="plot">${esc(detail.content)}</div>
+               <button class="link-btn" onclick="toggleClamp('plot', this, '展开简介', '收起简介')">展开简介</button>`
+            : ''
+        }
         <div class="actions">
           <button class="primary" onclick="play(${firstPlayableIndex()}, 0)">▶ 播放第一集</button>
           <button id="favBtn" onclick="toggleFav()">☆ 收藏</button>
         </div>
-        ${detail.lines.some((l) => !l.playable) ? `<div class="hint">标 ⚠ 的线路给的是网页分享页，网页播放器可能拿不到视频流，建议用不带 ⚠ 的线路。</div>` : ''}
+        ${detail.lines.some((l) => !l.playable) ? `<div class="hint">标 ⚠ 的线路连服务端也解析不出播放地址，建议换一条。</div>` : ''}
       </div>
     </div>
 
     <div class="section-title"><h2>选线路 / 选集</h2></div>
-    <div class="lines" id="lineBox"></div>
+    <div class="lines line-chips" id="lineBox"></div>
     <div class="episodes" id="epBox"></div>
+
+    <div class="detail-playbar" id="playbar">
+      <div class="pb-info">
+        <b>${esc(detail.name)}</b>
+        <span id="pbLine"></span>
+      </div>
+      <button class="primary" onclick="play(${lineIndex}, 0)">▶ 播放</button>
+    </div>
   `;
 
   renderLines();
   renderEpisodes();
   refreshFav();
+  syncPlaybarLine();
+  initPlaybar();
+}
+
+/** 悬浮播放条上显示当前线路名 */
+function syncPlaybarLine() {
+  const el = document.getElementById('pbLine');
+  const line = detail && detail.lines ? detail.lines[lineIndex] : null;
+  if (!el) return;
+  el.textContent = line ? `${line.name}${line.sourceName ? ' · ' + line.sourceName : ''}` : '';
+}
+
+/**
+ * 手机端悬浮播放条：滚过头部才出现。
+ * 桌面端由媒体查询挡住（.detail-playbar 默认 display:none）。
+ */
+function initPlaybar() {
+  const bar = document.getElementById('playbar');
+  const head = document.querySelector('.detail-head');
+  if (!bar || !head || !('IntersectionObserver' in window)) return;
+  new IntersectionObserver(
+    ([entry]) => {
+      const show = !entry.isIntersecting;
+      bar.classList.toggle('show', show);
+      document.body.classList.toggle('has-playbar', show);
+    },
+    { rootMargin: '-72px 0px 0px 0px' },
+  ).observe(head);
 }
 
 /** 默认落在第一条真正能播的线路上 */
@@ -125,8 +170,13 @@ function renderLines() {
         : l.needsResolve
           ? '（播放时会自动解析出真实地址）'
           : '（需浏览器打开，可能无法直接播放）';
-      const from = l.sourceName && l.sourceName !== detail.sourceName ? ` · ${l.sourceName}` : '';
-      return `<button class="${i === lineIndex ? 'active' : ''}" onclick="pickLine(${i})" title="${esc(l.name)}${esc(from)}${esc(warn)}">${esc(l.name)}${esc(from)} (${l.episodes.length})${flag}</button>`;
+      const from = l.sourceName && l.sourceName !== detail.sourceName ? l.sourceName : l.sourceName || '';
+      // 两行结构：主名（超长省略）/ 副行（源 · 集数）。一行塞不下时靠 .ln-name 截断，
+      // 不再让长名字把整行按钮撑成参差不齐的一堆宽度
+      return `<button class="${i === lineIndex ? 'active' : ''}" onclick="pickLine(${i})" title="${esc(l.name)} · ${esc(from)}${esc(warn)}">
+        <span class="ln-name">${esc(l.name)}${flag}</span>
+        <span class="ln-sub">${esc(from)} · ${l.episodes.length} 集</span>
+      </button>`;
     })
     .join('');
 }
@@ -135,6 +185,7 @@ function pickLine(i) {
   lineIndex = i;
   renderLines();
   renderEpisodes();
+  syncPlaybarLine();
 }
 
 function renderEpisodes() {
