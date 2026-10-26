@@ -74,6 +74,12 @@ export interface PlayLine {
    */
   source?: string;
   sourceName?: string;
+  /**
+   * 这条线路给的是「分享页 / 播放页」，需要服务端解析一次才能拿到真 m3u8
+   * （`…/share/<hash>`、`…/play/<id>`）。`playable` 仍然是「已验证可播」的意思，
+   * 未验证过的才会带这个标记（前端显示「需解析」而不是一棍子打死）。
+   */
+  needsResolve?: boolean;
 }
 
 /** 归一化后的片目 */

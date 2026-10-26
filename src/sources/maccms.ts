@@ -210,11 +210,78 @@ function buildUrl(base: string, params: Record<string, string | number | undefin
 }
 
 /** 搜索 */
+/**
+ * 搜索（只关心片子列表）。
+ *
+ * 区分「源不支持搜索」和「源这次挂了」是本模块的重点：
+ * 实测 `tyyszy` / `sdzy` 的 `wd=` 一律返回 6 字节纯文本「暂不支持搜索」，
+ * 以前被当成故障 → 前端报「部分片源暂时不可用」，还会累计熔断计数把它们从**列表**里踢掉。
+ * 现在这种情况返回 `unsupported: true`，上层既不会弹错误，也不会记失败。
+ */
+export interface SearchOutcome {
+  items: Item[];
+  /** 源不支持按名字搜（不是故障） */
+  unsupported: boolean;
+}
+
+export async function searchEx(src: SourceConfig, wd: string): Promise<SearchOutcome> {
+  const payload = await searchPayload(src, wd);
+  if (payload === 'unsupported') return { items: [], unsupported: true };
+  const list = payload.list ?? [];
+  return {
+    items: list.filter((v) => v && v.vod_name).map((v) => toItem(v, src)),
+    unsupported: false,
+  };
+}
+
+/** 老接口：只要列表。不支持搜索时返回空数组 */
 export async function search(src: SourceConfig, wd: string): Promise<Item[]> {
+  return (await searchEx(src, wd)).items;
+}
+
+/**
+ * 取搜索响应（原样 JSON / XML）。
+ *
+ * 只有「明确的纯文本提示」才会被判定为 unsupported；
+ * 网络错误、被截断的 JSON 仍然抛错，避免把真故障伪装成「不支持搜索」。
+ */
+async function searchPayload(src: SourceConfig, wd: string): Promise<RawResponse | 'unsupported'> {
   const url = buildUrl(src.base, { ac: 'detail', wd });
-  const data = await fetchJson(url, src.id);
-  if (data.code !== 1 || !Array.isArray(data.list)) return [];
-  return data.list.filter((v) => v && v.vod_name).map((v) => toItem(v, src));
+  const text = await fetchTextRaw(url);
+  const t = text.trim();
+
+  if (/暂不支持/.test(t)) return 'unsupported';
+  if (!t) throw new SourceError('搜索响应为空', src.id);
+
+  const looksJson = t.startsWith('{') || t.startsWith('[');
+  const looksXml = /^<\?xml/i.test(t) || /^<rss/i.test(t);
+  if (!looksJson && !looksXml) {
+    // 「暂不支持搜索」这类纯文本：短、没有结构，是能力问题不是故障
+    if (t.length <= 300) return 'unsupported';
+    throw new SourceError('搜索响应不是 JSON', src.id);
+  }
+
+  const data = looksXml ? parseMaccmsXml(t) : (JSON.parse(t) as RawResponse);
+  if (typeof data.code !== 'number' || !Array.isArray(data.list)) {
+    throw new SourceError('搜索响应结构异常', src.id);
+  }
+  return data;
+}
+
+/** 取原始文本（不重试；搜索专用，需要看到「暂不支持搜索」这种非 JSON 正文） */
+async function fetchTextRaw(url: string, timeoutMs = 8000): Promise<string> {
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      signal: ac.signal,
+      headers: { 'User-Agent': UA, Accept: 'application/json,text/plain,*/*' },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.text();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
@@ -344,20 +411,25 @@ export async function detail(src: SourceConfig, id: string): Promise<ItemDetail 
  * `search()` 只取了片名/年份把线路丢掉了。跨源聚合线路时如果先 search 再 detail
  * 就是每个源 2 个请求；用这个函数**每个源只要 1 个请求**。
  */
-export async function searchDetailed(
-  src: SourceConfig,
-  wd: string,
-): Promise<{ item: Item; lines: PlayLine[] }[]> {
-  const url = buildUrl(src.base, { ac: 'detail', wd });
-  const data = await fetchJson(url, src.id);
-  if (data.code !== 1 || !Array.isArray(data.list)) return [];
+export interface SearchDetailedOutcome {
+  hits: { item: Item; lines: PlayLine[] }[];
+  unsupported: boolean;
+}
 
-  return data.list
-    .filter((v) => v && v.vod_name)
-    .map((v) => ({
-      item: toItem(v, src),
-      lines: buildPlayLines(v.vod_play_from, v.vod_play_url),
-    }));
+export async function searchDetailed(src: SourceConfig, wd: string): Promise<SearchDetailedOutcome> {
+  const payload = await searchPayload(src, wd);
+  if (payload === 'unsupported') return { hits: [], unsupported: true };
+
+  const list = payload.list ?? [];
+  return {
+    unsupported: false,
+    hits: list
+      .filter((v) => v && v.vod_name)
+      .map((v) => ({
+        item: toItem(v, src),
+        lines: buildPlayLines(v.vod_play_from, v.vod_play_url),
+      })),
+  };
 }
 
 /** 存活探测：轻量请求，判断源是否可用 */

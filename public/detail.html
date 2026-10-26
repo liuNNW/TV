@@ -117,9 +117,16 @@ function renderLines() {
   // 名字后面带上源名，用户才知道自己在切什么，排查时也能一眼看出是谁抽了。
   box.innerHTML = detail.lines
     .map((l, i) => {
-      const warn = l.playable ? '' : '（需浏览器打开，可能无法直接播放）';
+      // ⚙ = 分享页线路（服务端能解析出真 m3u8，只是这张卡还没验活）
+      // ⚠ = 服务端也解析不出来，真的放不了
+      const flag = l.playable ? '' : l.needsResolve ? ' ⚙' : ' ⚠';
+      const warn = l.playable
+        ? ''
+        : l.needsResolve
+          ? '（播放时会自动解析出真实地址）'
+          : '（需浏览器打开，可能无法直接播放）';
       const from = l.sourceName && l.sourceName !== detail.sourceName ? ` · ${l.sourceName}` : '';
-      return `<button class="${i === lineIndex ? 'active' : ''}" onclick="pickLine(${i})" title="${esc(l.name)}${esc(from)}${esc(warn)}">${esc(l.name)}${esc(from)} (${l.episodes.length})${l.playable ? '' : ' ⚠'}</button>`;
+      return `<button class="${i === lineIndex ? 'active' : ''}" onclick="pickLine(${i})" title="${esc(l.name)}${esc(from)}${esc(warn)}">${esc(l.name)}${esc(from)} (${l.episodes.length})${flag}</button>`;
     })
     .join('');
 }

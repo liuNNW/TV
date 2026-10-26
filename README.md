@@ -120,6 +120,7 @@ npm run dev        # tsx watch 热重载
 | 分类归并 | 跨源同义分类自动合并（`日剧`+`日本剧`→一个，`港剧`/`港澳剧`/`港台剧`→`香港剧`），实测 8 源 104 个分类名归并后「电视剧」从 15 项降到 9 项；`演员`/`新闻资讯` 这类非影视分类直接不展示 |
 | 分类浏览 | 分类**自动采集**并按频道归组（各源分类 id 不同，不能硬编码），**结果落盘**，重启秒开（冷启动 5s / 缓存 16ms，旧实现 57.8s） |
 | 线路聚合 | 主库**跨源聚合线路**：搜索按 `name\|year` 去重只留一张卡，详情再把各源的同名片线路合起来（《嫁金钗》2 条 → 11 条，可播 1 → 6 条），每条带 `source`/`sourceName`；播放页用 `ln`/`ls`（线路名 + 源）定位，不怕线路条数浮动 |
+| 分享页解析 | 采集站很多线路给的是网页（`…/share/<hash>`、`…/play/<id>`），页面里写着带 `sign` 的真 m3u8。服务端 `/api/expand` 解析一次即可播：**《嫁金钗》11 条线路全部可播，⚠ 归零**（原来 5 条被误判） |
 | 封面海报 | 渐进式加载：列表先出，海报随后补上 |
 | 线路切换 | 一部片多个片源，随时切换 |
 | 选集 | 剧集自动列出全部集数 |
@@ -253,6 +254,7 @@ export const CHANNEL_OVERRIDES: Record<string, ChannelName> = {
 | GET | `/api/covers?ids=1,2,3&source=` | **批量取封面/年份**（渐进式补图） |
 | GET | `/api/detail?id=&source=&name=` | 详情 + 线路 + 选集。**线路跨源聚合**（同一部片在多个采集站的线路合并，每条带 `source`/`sourceName`），`?merge=0` 关闭聚合、`?force=1` 跳过缓存 |
 | GET | `/api/detail-by-name?name=&source=&year=` | 按片名跨源找同一部片 |
+| GET | `/api/expand?url=` | **分享页/播放页 → 真 m3u8**：采集站大量线路给的是 `…/share/<hash>`、`…/play/<id>` 网页，页面里写着带 `sign` 的真地址。解析结果缓存 10 分钟 |
 | GET | `/api/proxy?url=&ref=` | m3u8 / 分片 / 图片代理（兜底）。播放列表会走和 `/api/hls` 同一套广告过滤，分片再包一层代理 |
 | GET | `/api/local?path=&root=` | 本地媒体目录列举（文件夹视图） |
 | GET | `/api/local/library?path=&root=` | **媒体库**：递归扫描整棵目录（海报墙用） |
@@ -356,7 +358,7 @@ export const CHANNEL_OVERRIDES: Record<string, ChannelName> = {
 
 ```bash
 npm run typecheck                      # 类型检查
-npm test                               # 单元测试（223 个 / 15 文件）
+npm test                               # 单元测试（235 个 / 16 文件）
 node scripts/acceptance.mjs            # 端到端验收（22 项）
 node scripts/source-probe.mjs --maccms <采集接口>   # 片源探测（加源前先跑这个）
 node scripts/source-probe.mjs --wzzycc <模板站地址>  # 影视仓镜像探测

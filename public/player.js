@@ -450,11 +450,38 @@ function refererFor(url) {
   }
 }
 
-function loadEpisode() {
-  const url = currentUrl();
+/**
+ * 让服务端把「分享页 / 播放页」解析成真 m3u8。
+ * 失败返回空串（调用方按「不可播」处理，不会静默当成成功）。
+ */
+async function expandShareUrl(url) {
+  try {
+    const r = await api(`/expand?url=${encodeURIComponent(url)}`);
+    return r && r.ok && r.url ? r.url : '';
+  } catch {
+    return '';
+  }
+}
+
+async function loadEpisode() {
+  let url = currentUrl();
   if (!url) {
     showOverlay('该集没有播放地址', true);
     return;
+  }
+
+  // 分享页 / 播放页（`…/share/<hash>`、`…/play/<id>`）：页面里写着带 sign 的真 m3u8，
+  // 让服务端解析一次再播。以前这里直接判死（界面挂满 ⚠），实测这些页面全都能解析出来。
+  if (!isDyrs && !looksLikePlayable(url)) {
+    const resolved = await expandShareUrl(url);
+    if (resolved) {
+      url = resolved;
+      // 回写这一集，同一集不再重复解析
+      const cur = detail && detail.lines && detail.lines[lineIndex];
+      const ep = cur && cur.episodes ? cur.episodes[epIndex] : null;
+      if (ep) ep.url = resolved;
+      if (cur) cur.playable = true;
+    }
   }
 
   // 采集站有些线路给的是网页分享页，播放器拿到的会是 HTML 而不是视频
@@ -469,7 +496,7 @@ function loadEpisode() {
       updateUrl();
       return loadEpisode();
     }
-    showOverlay('这个线路给的是网页分享地址，网页播放器无法直接播放。请返回详情页换其他线路。', true);
+    showOverlay('这个线路给的是网页分享地址，服务端也没解析出播放地址。请返回详情页换其他线路。', true);
     return;
   }
 

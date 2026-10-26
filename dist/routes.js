@@ -6,6 +6,7 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { PORT, TYPE_MAP } from './config.js';
 import { checkUrl, proxyFetch } from './proxy.js';
+import { resolveSharePage } from './expand.js';
 import { processPlaylist } from './adfilter.js';
 import { getMarker, setMarker } from './store.js';
 import { listLocal, localRoot, safePath, scanLibrary, serveLocalFile } from './localmedia.js';
@@ -55,11 +56,34 @@ router.get('/search', async (req, res) => {
     if (!wd)
         return fail(res, 400, '缺少搜索关键词 wd');
     try {
-        const { items, okSources, failed } = await searchAll(wd);
-        res.json({ ok: true, items, okSources, failed, total: items.length });
+        const { items, okSources, failed, unsupported } = await searchAll(wd);
+        // failed 和 unsupported 必须分开：前者是「这次连不上」，后者是「这个源压根不支持按名字搜」
+        // （tyyszy / sdzy 实测只回「暂不支持搜索」）。混在一起会天天弹「暂时不可用」，还会误触熔断。
+        res.json({ ok: true, items, okSources, failed, unsupported, total: items.length });
     }
     catch (e) {
         fail(res, 502, e instanceof Error ? e.message : '搜索失败');
+    }
+});
+/**
+ * 分享页 / 播放页 → 真 m3u8。
+ *
+ * 采集站大量线路给的是网页（`…/share/<hash>`、`…/play/<id>`），页面里写着带 `sign` 的
+ * 真地址。以前只按 URL 里有没有 `.m3u8` 判定，界面挂满 ⚠ —— 实测这些页面全都能解析出来。
+ * 解析结果缓存 10 分钟（`sign` 有有效期），播放页每次换集都会调一次兜底。
+ */
+router.get('/expand', async (req, res) => {
+    const target = q(req, 'url').trim();
+    if (!target)
+        return fail(res, 400, '缺少 url');
+    try {
+        const r = await resolveSharePage(target);
+        if (!r)
+            return fail(res, 502, '这个分享页里没解析出播放地址');
+        res.json({ ok: true, url: r.url, from: r.from });
+    }
+    catch (e) {
+        fail(res, 502, e instanceof Error ? e.message : '解析失败');
     }
 });
 /**
@@ -174,6 +198,7 @@ router.get('/detail', async (req, res) => {
             mergedFrom: agg.mergedFrom,
             mergedCount: agg.mergedCount,
             skipped: agg.skipped,
+            unsupported: agg.unsupported,
         });
     }
     catch (e) {

@@ -90,8 +90,11 @@ export function buildPlayLines(
 
     // 有任意一集是可直接播放的 m3u8，就认为这条线路可用
     const playable = episodes.some((e) => looksLikeHls(e.url));
+    // 不是 m3u8，但看着像「分享页 / 播放页」——页面里有真地址，服务端解析一次就能放。
+    // 以前这类线路被直接判死（界面一堆 ⚠），实测《嫁金钗》5 条全都能解析出真 m3u8。
+    const needsResolve = !playable && episodes.some((e) => isSharePage(e.url));
 
-    lines.push({ name, episodes, playable });
+    lines.push(needsResolve ? { name, episodes, playable, needsResolve: true } : { name, episodes, playable });
   }
 
   return lines;
@@ -118,6 +121,21 @@ export function looksLikeHls(url: string): boolean {
     return lower.includes('.m3u8');
   }
   return false;
+}
+
+/**
+ * 是不是「分享页 / 播放页」——地址本身不是 m3u8，但页面里有真地址。
+ *
+ * 采集站大量线路给的是这种网页（`…/share/<hash>`、`…/play/<id>`），
+ * 直接判「不可播」会让整个界面挂满 ⚠。实测《嫁金钗》5 条这样的线路
+ * 全部能在页面里找到 `index.m3u8?sign=…`，拉下来的分片是标准 TS。
+ */
+export function isSharePage(url: string): boolean {
+  if (!url) return false;
+  const lower = url.toLowerCase();
+  if (!(lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('/'))) return false;
+  if (lower.includes('.m3u8')) return false;
+  return /\/share\/|\/play\//.test(lower);
 }
 
 /** 从可能带 query 的地址里取文件名，用于展示 */

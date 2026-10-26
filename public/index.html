@@ -242,15 +242,22 @@ async function load() {
       const r = await api(`/search?wd=${encodeURIComponent(wd)}`);
       document.getElementById('srcHint').textContent = `命中 ${r.total} 条`;
 
+      // 提示分两档：不支持搜索（能力问题，常驻、不用管）
+      // 和这次连不上（故障，可能下次就好）—— 以前混在一起，天天弹「暂时不可用」
+      let hints = '';
+      if (r.unsupported && r.unsupported.length) {
+        hints += `<div class="hint">${esc(r.unsupported.join('、'))} 不支持按名字搜索，已跳过（不影响浏览和播放）。</div>`;
+      }
+      if (r.failed && r.failed.length) {
+        hints += `<div class="err">部分片源暂时连不上（${esc(r.failed.join('、'))}），已展示其余结果。</div>`;
+      }
+
       if (r.items.length === 0) {
-        content.innerHTML = `<div class="state"><div class="big">🔍</div>没有找到「${esc(wd)}」
+        content.innerHTML = `${hints}<div class="state"><div class="big">🔍</div>没有找到「${esc(wd)}」
           <div style="margin-top:8px;font-size:13px">换个关键词或更短的片名试试</div></div>`;
         return;
       }
-      let html = '';
-      if (r.failed && r.failed.length) {
-        html += `<div class="err">部分片源暂时不可用（${esc(r.failed.join('、'))}），已展示其余结果。</div>`;
-      }
+      let html = hints;
       html += `<div class="grid">${r.items.map(renderCard).join('')}</div>`;
       content.innerHTML = html;
 

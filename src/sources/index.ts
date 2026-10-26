@@ -14,6 +14,8 @@ import type { ChannelGroup } from '../channels.js';
 import type { SourceConfig } from '../config.js';
 import * as maccms from './maccms.js';
 import type { DetailResult, Item, ItemDetail, ListResult, PlayLine } from './types.js';
+import { resolveSharePage } from '../expand.js';
+import { looksLikeHls } from '../parser.js';
 
 /** 列表页缓存（含封面），key = 源:分类:页码 */
 const listCache = new LruCache<ListResult>(CACHE_MAX_PAGES, CACHE_TTL_MS);
@@ -113,30 +115,59 @@ function dedupe(items: Item[]): Item[] {
  * 搜索所有源，返回合并结果。
  * 每个源单独 try/catch，一个挂了不影响其他。
  */
-export async function searchAll(wd: string): Promise<{ items: Item[]; okSources: string[]; failed: string[] }> {
+/**
+ * 已知「不支持按名字搜索」的源。
+ *
+ * `tyyszy` / `sdzy` 的 `wd=` 一律返回「暂不支持搜索」。记住之后：
+ *   1. 搜索页不再把它们算作故障；
+ *   2. **跨源聚合直接跳过它们**（否则每部片都要白等 3 秒超时）。
+ */
+const unsupportedSearch = new Set<string>();
+
+export function resetUnsupportedSearch(): void {
+  unsupportedSearch.clear();
+}
+
+export interface SearchAllResult {
+  items: Item[];
+  okSources: string[];
+  /** 这次真挂了（网络 / 超时） */
+  failed: string[];
+  /** 源不支持按名字搜（`tyyszy` / `sdzy` 实测只回「暂不支持搜索」），不是故障 */
+  unsupported: string[];
+}
+
+export async function searchAll(wd: string): Promise<SearchAllResult> {
   const targets = activeSources();
   const results = await Promise.allSettled(
-    targets.map(async (src) => ({ src, items: await maccms.search(src, wd) })),
+    targets.map(async (src) => ({ src, out: await maccms.searchEx(src, wd) })),
   );
 
   const all: Item[] = [];
   const okSources: string[] = [];
   const failed: string[] = [];
+  const unsupported: string[] = [];
 
   for (let i = 0; i < results.length; i++) {
     const r = results[i]!;
     const src = targets[i]!;
     if (r.status === 'fulfilled') {
+      // 不支持的源既不算成功也不算失败：记 noteOk / noteFail 都会污染熔断判断
+      if (r.value.out.unsupported) {
+        unsupported.push(src.id);
+        unsupportedSearch.add(src.id);
+        continue;
+      }
       noteOk(src.id);
       okSources.push(src.id);
-      all.push(...r.value.items);
+      all.push(...r.value.out.items);
     } else {
       noteFail(src.id);
       failed.push(src.id);
     }
   }
 
-  return { items: dedupe(all), okSources, failed };
+  return { items: dedupe(all), okSources, failed, unsupported };
 }
 
 /**
@@ -356,8 +387,10 @@ export async function detailByName(
 export interface AggregatedDetail extends DetailResult {
   /** 合并进来的源（含每条贡献了几条线路） */
   mergedFrom: { source: string; sourceName: string; lines: number }[];
-  /** 这次没赶上预算 / 不支持的源 */
+  /** 这次没赶上预算的源 */
   skipped: string[];
+  /** 源不支持按名字搜（不是故障，只是没法参与合并） */
+  unsupported: string[];
   /** 合并后总线路数 */
   mergedCount: number;
 }
@@ -430,6 +463,42 @@ export function mergeLines(
   return out.map(({ _rank, _idx, ...rest }) => rest);
 }
 
+/**
+ * 分享页线路验活：**只解析第 0 集**。
+ *
+ * 不批量解析全部集数是有意的：18 集 × 5 条线路 = 90 个请求，详情页会被拖死。
+ * 解析出一集就足以确认「这条线路能用」，剩下的交给播放页按需解析。
+ */
+async function verifyShareLines(lines: PlayLine[]): Promise<void> {
+  const targets = lines.filter((l) => l.needsResolve && l.episodes.length > 0);
+  if (targets.length === 0) return;
+
+  const CONCURRENCY = 3;
+  for (let i = 0; i < targets.length; i += CONCURRENCY) {
+    const chunk = targets.slice(i, i + CONCURRENCY);
+    await Promise.all(
+      chunk.map(async (line) => {
+        const ep = line.episodes[0];
+        if (!ep) return;
+        if (looksLikeHls(ep.url)) {
+          line.playable = true;
+          line.needsResolve = false;
+          return;
+        }
+        try {
+          const resolved = await timeout(resolveSharePage(ep.url, 2500), 3000);
+          if (!resolved?.url) return;
+          line.episodes[0] = { ...ep, url: resolved.url };
+          line.playable = true;
+          line.needsResolve = false;
+        } catch {
+          // 解析不出来就保持「不可播」，前端会显示 ⚠
+        }
+      }),
+    );
+  }
+}
+
 export async function detailAggregated(
   id: string,
   sourceId?: string,
@@ -445,19 +514,24 @@ export async function detailAggregated(
 
   // 有片名就先把跨源搜索打出去，和本源详情**并行**跑 —— 否则用户要多等一整趟串行请求
   // （实测《嫁金钗》详情从 5.5s 降到 3.5s 左右）
-  const others = activeSources();
+  //
+  // 已知不支持搜索的源（tyyszy / sdzy）直接不查：查了也是「暂不支持搜索」，
+  // 还要白等 3 秒超时，反而拖慢详情。
+  const all = activeSources();
+  const knownUnsupported = all.filter((s) => unsupportedSearch.has(s.id)).map((s) => s.id);
+  const others = all.filter((s) => !unsupportedSearch.has(s.id));
   const early = merge && expectedName
     ? Promise.allSettled(
         others.map(async (src) => ({
           src,
-          hits: await timeout(maccms.searchDetailed(src, expectedName), 3000),
+          out: await timeout(maccms.searchDetailed(src, expectedName), 3000),
         })),
       )
     : null;
 
   const primary = await detailAny(id, sourceId, expectedName);
   if (!primary.detail) {
-    return { ...primary, mergedFrom: [], skipped: [], mergedCount: 0 };
+    return { ...primary, mergedFrom: [], skipped: [], unsupported: [], mergedCount: 0 };
   }
 
   const det = primary.detail;
@@ -469,6 +543,7 @@ export async function detailAggregated(
     },
   ];
   const skipped: string[] = [];
+  const unsupported: string[] = [...knownUnsupported];
 
   if (merge) {
     const targets = early ? others : others.filter((s) => s.id !== primary.source);
@@ -477,7 +552,7 @@ export async function detailAggregated(
       : await Promise.allSettled(
           targets.map(async (src) => ({
             src,
-            hits: await timeout(maccms.searchDetailed(src, det.name), 3000),
+            out: await timeout(maccms.searchDetailed(src, det.name), 3000),
           })),
         );
     for (let i = 0; i < settled.length; i++) {
@@ -489,7 +564,13 @@ export async function detailAggregated(
         skipped.push(src.id);
         continue;
       }
-      const picked = pickSameTitle(r.value.hits, det.name, det.year);
+      // 源压根不支持搜索（tyyszy / sdzy）：单列，不算「没赶上」，并记住下次别再白问
+      if (r.value.out.unsupported) {
+        unsupported.push(src.id);
+        unsupportedSearch.add(src.id);
+        continue;
+      }
+      const picked = pickSameTitle(r.value.out.hits, det.name, det.year);
       if (!picked || picked.lines.length === 0) {
         skipped.push(src.id);
         continue;
@@ -499,6 +580,9 @@ export async function detailAggregated(
   }
 
   const lines = mergeLines(groups);
+  // 分享页 / 播放页线路（界面上原来一律挂 ⚠）：只解析第 0 集来验活，
+  // 成功就把这一集换成真 m3u8 并置 playable，失败才保留「不可播」
+  if (merge) await verifyShareLines(lines);
   const data: AggregatedDetail = {
     detail: { ...det, lines },
     source: primary.source,
@@ -508,6 +592,7 @@ export async function detailAggregated(
       lines: g.lines.length,
     })),
     skipped,
+    unsupported,
     mergedCount: lines.length,
   };
 
