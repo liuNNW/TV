@@ -293,6 +293,136 @@ export async function detailByName(name, sourceId, year) {
         return null;
     }
 }
+const AGG_TTL = 15 * 60 * 1000;
+const aggCache = new Map();
+function timeout(p, ms) {
+    return new Promise((resolve, reject) => {
+        const t = setTimeout(() => reject(new Error('timeout')), ms);
+        p.then((v) => {
+            clearTimeout(t);
+            resolve(v);
+        }, (e) => {
+            clearTimeout(t);
+            reject(e);
+        });
+    });
+}
+/**
+ * 从搜索结果里挑「同一部片」。
+ *
+ * 门槛刻意严：片名**完全相等**，且年份不冲突（同源给不出年份时按可接受处理）。
+ * 宁可少合并，也不要把《嫁金钗》和《嫁金钗之xxx》串在一起 —— 串片比线路少严重得多。
+ */
+export function pickSameTitle(list, name, year) {
+    const exact = list.filter((x) => x.item.name === name);
+    if (exact.length === 0)
+        return null;
+    if (!year)
+        return exact[0];
+    const compatible = exact.filter((x) => !x.item.year || x.item.year === year);
+    return compatible[0] ?? null;
+}
+/**
+ * 合并多源线路（纯函数，便于单测）。
+ *
+ * 排序必须**稳定**：播放页 URL 里的 `line` 是下标，顺序一变就指到别的线路上去了。
+ * 规则：可播优先 → 源顺序（SOURCES 里的顺序）→ 该源内部的原始顺序。
+ */
+export function mergeLines(groups) {
+    const rank = new Map(SOURCES.map((s, i) => [s.id, i]));
+    const out = [];
+    const seen = new Set();
+    for (const g of groups) {
+        g.lines.forEach((line, idx) => {
+            const key = `${g.source}|${line.name}`;
+            if (seen.has(key))
+                return;
+            seen.add(key);
+            out.push({ ...line, source: g.source, sourceName: g.sourceName, _rank: rank.get(g.source) ?? 99, _idx: idx });
+        });
+    }
+    out.sort((a, b) => {
+        if (a.playable !== b.playable)
+            return a.playable ? -1 : 1;
+        if (a._rank !== b._rank)
+            return a._rank - b._rank;
+        return a._idx - b._idx;
+    });
+    return out.map(({ _rank, _idx, ...rest }) => rest);
+}
+export async function detailAggregated(id, sourceId, expectedName, opts = {}) {
+    const merge = opts.merge !== false;
+    const cacheKey = `agg|${sourceId ?? 'auto'}|${id}`;
+    if (!opts.force) {
+        const hit = aggCache.get(cacheKey);
+        if (hit && Date.now() - hit.at < AGG_TTL)
+            return hit.data;
+    }
+    // 有片名就先把跨源搜索打出去，和本源详情**并行**跑 —— 否则用户要多等一整趟串行请求
+    // （实测《嫁金钗》详情从 5.5s 降到 3.5s 左右）
+    const others = activeSources();
+    const early = merge && expectedName
+        ? Promise.allSettled(others.map(async (src) => ({
+            src,
+            hits: await timeout(maccms.searchDetailed(src, expectedName), 3000),
+        })))
+        : null;
+    const primary = await detailAny(id, sourceId, expectedName);
+    if (!primary.detail) {
+        return { ...primary, mergedFrom: [], skipped: [], mergedCount: 0 };
+    }
+    const det = primary.detail;
+    const groups = [
+        {
+            source: primary.source,
+            sourceName: findSource(primary.source)?.name ?? primary.source,
+            lines: det.lines,
+        },
+    ];
+    const skipped = [];
+    if (merge) {
+        const targets = early ? others : others.filter((s) => s.id !== primary.source);
+        const settled = early
+            ? await early
+            : await Promise.allSettled(targets.map(async (src) => ({
+                src,
+                hits: await timeout(maccms.searchDetailed(src, det.name), 3000),
+            })));
+        for (let i = 0; i < settled.length; i++) {
+            const r = settled[i];
+            const src = targets[i];
+            // 提前发出去的那批包含本源自己，跳过它（本源线路已经有了）
+            if (src.id === primary.source)
+                continue;
+            if (r.status !== 'fulfilled') {
+                skipped.push(src.id);
+                continue;
+            }
+            const picked = pickSameTitle(r.value.hits, det.name, det.year);
+            if (!picked || picked.lines.length === 0) {
+                skipped.push(src.id);
+                continue;
+            }
+            groups.push({ source: src.id, sourceName: src.name, lines: picked.lines });
+        }
+    }
+    const lines = mergeLines(groups);
+    const data = {
+        detail: { ...det, lines },
+        source: primary.source,
+        mergedFrom: groups.map((g) => ({
+            source: g.source,
+            sourceName: g.sourceName,
+            lines: g.lines.length,
+        })),
+        skipped,
+        mergedCount: lines.length,
+    };
+    if (aggCache.size > 120)
+        aggCache.clear();
+    aggCache.set(cacheKey, { at: Date.now(), data });
+    return data;
+}
 /** 所有源存活状态（含熔断标记，死源不必反复探） */
 export async function healthAll() {
     const results = await Promise.allSettled(SOURCES.map((s) => maccms.health(s)));

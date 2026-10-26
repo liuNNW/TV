@@ -65,6 +65,15 @@ export interface PlayLine {
    * 这类线路标为 false，前端会提示并且不会被自动选中。
    */
   playable: boolean;
+  /**
+   * 这条线路来自哪个采集站。
+   *
+   * 详情页现在会**跨源聚合**同一部片的所有线路（实测《嫁金钗》被搜索去重后
+   * 只剩 lziapi 的 2 条，而 5 个源一共有 9 条），合并后必须知道每条线路的出处：
+   * 前端要显示「lzm3u8 · lziapi」，排查时也要能一眼看出是哪家抽了。
+   */
+  source?: string;
+  sourceName?: string;
 }
 
 /** 归一化后的片目 */

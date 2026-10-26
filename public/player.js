@@ -14,6 +14,15 @@ const year = params.get('year') || '';
 
 let lineIndex = Number(params.get('line') || 0);
 let epIndex = Number(params.get('ep') || 0);
+/**
+ * 线路的「名字 + 源」。
+ *
+ * 主库线路是跨源聚合的（同一部片在 lziapi / ffzy / dytt 各有一条），
+ * 而某个源某次超时缺席时，聚合后的线路条数会变 —— 只按 `line` 下标定位，
+ * 刷新或换设备后就会指到别的线路上。所以优先按名字+源定位，下标只作兜底。
+ */
+const wantLineName = params.get('ln') || '';
+const wantLineSource = params.get('ls') || '';
 
 /* ---------------- 影视仓（dyrs）分支 ---------------- */
 
@@ -205,6 +214,16 @@ async function boot() {
   // 校正索引，避免 URL 里的越界值
   lineIndex = Math.min(Math.max(0, lineIndex), detail.lines.length - 1);
 
+  // 主库：URL 里带了线路名（+源）就按它定位，别信下标 —— 聚合结果会随源可用性变化
+  if (!isDyrs && wantLineName) {
+    const hit = detail.lines.findIndex(
+      (l) => l.name === wantLineName && (!wantLineSource || l.source === wantLineSource),
+    );
+    if (hit >= 0) lineIndex = hit;
+  }
+  // 定位变了就把正确的下标写回 URL（分享出去的链接才准）
+  updateUrl();
+
   // 影视仓：URL 里带的是线路**名字**和集序号，优先按它们定位（刷新/分享链接都不怕索引错位）
   if (isDyrs && dyrsOrigin) {
     const byOrigin = detail.lines.findIndex((l) => l.origin === dyrsOrigin);
@@ -284,8 +303,11 @@ function renderLines() {
     .map((l, i) => {
       const active = i === lineIndex ? ' active' : '';
       const warn = l.playable ? '' : '<span class="warn">⚠ 网页线路</span>';
-      return `<button class="line-item${active}" data-i="${i}">
-        <span>${esc(l.name)}</span>
+      // 主库的线路是跨源聚合来的（同名电影在多个采集站都有），带上源名才知道在切什么；
+      // 影视仓的线路没有 sourceName，这里自然不显示。
+      const from = l.sourceName ? `<span class="src">${esc(l.sourceName)}</span>` : '';
+      return `<button class="line-item${active}" data-i="${i}" title="${esc(l.name)}${l.sourceName ? ' · ' + esc(l.sourceName) : ''}">
+        <span>${esc(l.name)}${from}</span>
         <span class="cnt">${warn || l.episodes.length + ' 集'}</span>
       </button>`;
     })
@@ -349,6 +371,13 @@ function updateUrl() {
   const p = new URLSearchParams({
     id: videoId, source, name, line: String(lineIndex), ep: String(epIndex),
   });
+  // 主库线路是跨源聚合的：某个源某次超时缺席，线路列表长度就会变，
+  // 只靠 line 下标刷新后可能指到别的线路上。这里把「线路名 + 源」也记进 URL。
+  const curLine = detail && detail.lines ? detail.lines[lineIndex] : null;
+  if (!isDyrs && curLine) {
+    p.set('ln', curLine.name);
+    if (curLine.source) p.set('ls', curLine.source);
+  }
   // 影视仓：kind / seq 是重取详情必需的参数，origin / p 用「值」记一份，
   // 刷新或分享出去的链接就不依赖索引了
   if (isDyrs) {

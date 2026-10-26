@@ -24,6 +24,7 @@ import type {
   Item,
   ItemDetail,
   ListResult,
+  PlayLine,
   RawResponse,
   RawVod,
 } from './types.js';
@@ -334,6 +335,29 @@ export async function detail(src: SourceConfig, id: string): Promise<ItemDetail 
   const lines = buildPlayLines(raw.vod_play_from, raw.vod_play_url);
 
   return { ...base, lines };
+}
+
+/**
+ * 带线路的搜索：**和 `search()` 是同一个请求**，只是把线路也解析出来。
+ *
+ * `ac=detail&wd=` 的响应里本来就带 `vod_play_from` / `vod_play_url`，
+ * `search()` 只取了片名/年份把线路丢掉了。跨源聚合线路时如果先 search 再 detail
+ * 就是每个源 2 个请求；用这个函数**每个源只要 1 个请求**。
+ */
+export async function searchDetailed(
+  src: SourceConfig,
+  wd: string,
+): Promise<{ item: Item; lines: PlayLine[] }[]> {
+  const url = buildUrl(src.base, { ac: 'detail', wd });
+  const data = await fetchJson(url, src.id);
+  if (data.code !== 1 || !Array.isArray(data.list)) return [];
+
+  return data.list
+    .filter((v) => v && v.vod_name)
+    .map((v) => ({
+      item: toItem(v, src),
+      lines: buildPlayLines(v.vod_play_from, v.vod_play_url),
+    }));
 }
 
 /** 存活探测：轻量请求，判断源是否可用 */

@@ -109,7 +109,7 @@ function detailHref(item) {
 }
 
 /** 播放页地址 */
-function playHref(item, lineIndex, epIndex) {
+function playHref(item, lineIndex, epIndex, line) {
   const p = new URLSearchParams({
     id: item.id,
     source: item.source,
@@ -117,6 +117,12 @@ function playHref(item, lineIndex, epIndex) {
     line: String(lineIndex),
     ep: String(epIndex),
   });
+  // 线路是跨源聚合来的，条数会随源可用性变化；把线路名+源一起带上，
+  // 播放页就能按「名字」定位而不是靠下标（否则会指到别的线路）
+  if (line) {
+    p.set('ln', line.name);
+    if (line.source) p.set('ls', line.source);
+  }
   if (item.pic) p.set('pic', item.pic);
   if (item.year) p.set('year', item.year);
   return `play.html?${p.toString()}`;

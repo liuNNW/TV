@@ -31,7 +31,7 @@ import {
   resolveMain,
   rewriteDyrsPlaylist,
 } from './dyrs.js';
-import { channelGroups, coversByIds, detailAny, detailByName, enrichCategoryCounts, healthAll, listAny, mergedCategories, searchAll } from './sources/index.js';
+import { channelGroups, coversByIds, detailAggregated, detailAny, detailByName, enrichCategoryCounts, healthAll, listAny, mergedCategories, searchAll } from './sources/index.js';
 import { buildMacFacets, MAC_FACET_GROUPS } from './facets.js';
 import {
   bindRepo,
@@ -205,11 +205,21 @@ router.get('/detail', async (req, res) => {
   const source = q(req, 'source') || undefined;
   // 带上片名用于校验，防止跨源 id 撞车返回错片子
   const expectedName = q(req, 'name').trim() || undefined;
+  // 跨源聚合线路：默认开（搜索去重后只剩一张卡，不聚合就只有 1 个源的 1~2 条线路）
+  const merge = q(req, 'merge') !== '0';
+  const force = q(req, 'force') === '1';
 
   try {
-    const { detail, source: used } = await detailAny(id, source, expectedName);
-    if (!detail) return fail(res, 404, '未找到该片目');
-    res.json({ ok: true, detail, source: used });
+    const agg = await detailAggregated(id, source, expectedName, { merge, force });
+    if (!agg.detail) return fail(res, 404, '未找到该片目');
+    res.json({
+      ok: true,
+      detail: agg.detail,
+      source: agg.source,
+      mergedFrom: agg.mergedFrom,
+      mergedCount: agg.mergedCount,
+      skipped: agg.skipped,
+    });
   } catch (e) {
     fail(res, 502, e instanceof Error ? e.message : '获取详情失败');
   }

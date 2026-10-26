@@ -113,10 +113,13 @@ function firstPlayableIndex() {
 
 function renderLines() {
   const box = document.getElementById('lineBox');
+  // 线路是**跨源聚合**来的：同一部片可能来自 lziapi / ffzy / dytt 等几个源，
+  // 名字后面带上源名，用户才知道自己在切什么，排查时也能一眼看出是谁抽了。
   box.innerHTML = detail.lines
     .map((l, i) => {
       const warn = l.playable ? '' : '（需浏览器打开，可能无法直接播放）';
-      return `<button class="${i === lineIndex ? 'active' : ''}" onclick="pickLine(${i})" title="${esc(l.name)}${esc(warn)}">${esc(l.name)} (${l.episodes.length})${l.playable ? '' : ' ⚠'}</button>`;
+      const from = l.sourceName && l.sourceName !== detail.sourceName ? ` · ${l.sourceName}` : '';
+      return `<button class="${i === lineIndex ? 'active' : ''}" onclick="pickLine(${i})" title="${esc(l.name)}${esc(from)}${esc(warn)}">${esc(l.name)}${esc(from)} (${l.episodes.length})${l.playable ? '' : ' ⚠'}</button>`;
     })
     .join('');
 }
@@ -144,7 +147,8 @@ function renderEpisodes() {
 
 function play(li, ei) {
   const item = { id: detail.id, source: detail.source, name: detail.name, pic: detail.pic, year: detail.year };
-  location.href = playHref(item, li, ei);
+  // 把线路对象一起传下去：线路是跨源聚合的，播放页要按「名字+源」定位而不是下标
+  location.href = playHref(item, li, ei, detail.lines[li]);
 }
 
 /* 已看进度：从历史里取，画在选集上 */
